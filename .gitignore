@@ -1,0 +1,6 @@
+.*
+!.git*
+!.npmrc
+!/test/fixtures/**
+/coverage/
+/node_modules/
