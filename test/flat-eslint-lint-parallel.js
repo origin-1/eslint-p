@@ -1,13 +1,12 @@
-/* s eslint-disable @stylistic/max-len */
 /* globals after, afterEach, before, beforeEach, describe, it */
 
 import assert                               from 'node:assert';
 import fs                                   from 'node:fs';
 import fsp                                  from 'node:fs/promises';
-import { createRequire }                    from 'node:module';
 import os                                   from 'node:os';
 import path                                 from 'node:path';
-import { fileURLToPath, pathToFileURL }     from 'node:url';
+import { fileURLToPath }                    from 'node:url';
+import eslintDirURL                         from '../lib/default-eslint-dir-url.js';
 import patchFlatESLint                      from '../lib/patch-flat-eslint.js';
 import { createCustomTeardown, unIndent }   from './_utils/index.js';
 import fCache                               from 'file-entry-cache';
@@ -18,9 +17,6 @@ import sinon                                from 'sinon';
 async function getFlatESLint()
 {
     const { default: { FlatESLint } } = await import('eslint/use-at-your-own-risk');
-    const require = createRequire(import.meta.url);
-    const eslintDir = path.join(require.resolve('eslint'), '../../');
-    const eslintDirURL = pathToFileURL(eslintDir);
     await patchFlatESLint(FlatESLint, eslintDirURL);
     return FlatESLint;
 }
