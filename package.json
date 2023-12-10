@@ -12,6 +12,8 @@
     "url": "git+https://github.com/origin-1/eslint-p.git"
   },
   "scripts": {
+    "clean": "node dev/clean.js",
+    "coverage": "node dev/coverage.js",
     "lint": "node ./lib/eslint-p.js .",
     "lint:fix": "node ./lib/eslint-p.js . --fix",
     "test": "mocha test/*.js"
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^0.19.0",
+    "c8js": "^0.6.0",
     "esprima": "^4.0.1",
     "file-entry-cache": "^7.0.2",
     "fs-teardown": "^0.3.2",
