@@ -6,7 +6,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { addFile, createTeardown } from 'fs-teardown';
+import { createTeardown } from 'fs-teardown';
 
 // -----------------------------------------------------------------------------
 // Helpers
@@ -38,12 +38,7 @@ function unIndent(strings, ...values)
  */
 function createCustomTeardown({ cwd, files })
 {
-    const { prepare, cleanup, getPath } =
-    createTeardown
-    (
-        cwd,
-        ...Object.keys(files).map(filename => addFile(filename, files[filename])),
-    );
+    const { prepare, cleanup, resolve: getPath } = createTeardown({ rootDir: cwd, paths: files });
     return { prepare, cleanup, getPath };
 }
 

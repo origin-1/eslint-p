@@ -12,7 +12,6 @@ import { createCustomTeardown, unIndent }   from './_utils/index.js';
 import fCache                               from 'file-entry-cache';
 import murmur                               from 'imurmurhash';
 import shell                                from 'shelljs';
-import sinon                                from 'sinon';
 
 async function getFlatESLint()
 {
@@ -2292,21 +2291,14 @@ describe
 
                         eslint =
                         await FlatESLint.fromCLIOptions
-                        (
-                            Object.assign
-                            ({ }, baseOptions, { cache: true, fix: false }),
-                        );
-
+                        ({ ...baseOptions, cache: true, fix: false });
                         // Do initial lint run and populate the cache file
                         await eslint.lintParallel
                         ([path.resolve(fixtureDir, `${fixtureDir}/fixmode`)]);
 
                         eslint =
                         await FlatESLint.fromCLIOptions
-                        (
-                            Object.assign
-                            ({ }, baseOptions, { cache: true, fix: true }),
-                        );
+                        ({ ...baseOptions, cache: true, fix: true });
                         const results =
                         await eslint.lintParallel
                         ([path.resolve(fixtureDir, `${fixtureDir}/fixmode`)]);
@@ -2440,7 +2432,6 @@ describe
                 (
                     () =>
                     {
-                        sinon.restore();
                         if (cacheFilePath)
                             doDelete(cacheFilePath);
                     },
@@ -2718,15 +2709,12 @@ describe
                                 ignore: false,
                             },
                         );
+                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
+                        const file = fs.realpathSync(path.join(cwd, 'test-file.js'));
 
-                        // let spy = sinon.spy(fs.promises, 'readFile');
-
-                        let file = path.join(cwd, 'test-file.js');
-
-                        file = fs.realpathSync(file);
                         const results = await eslint.lintParallel([file]);
 
-                        for (const { errorCount, warningCount } of results)
+                        for (const { errorCount, warningCount, readFileCalled } of results)
                         {
                             assert.strictEqual
                             (
@@ -2734,20 +2722,17 @@ describe
                                 0,
                                 'the file should have passed linting without errors or warnings',
                             );
+                            assert
+                            (
+                                readFileCalled,
+                                'ESLint should have read the file because there was no cache file',
+                            );
                         }
-                        // assert
-                        // (
-                        //     spy.calledWith(file),
-                        //    'ESLint should have read the file because there was no cache file',
-                        // );
                         assert
                         (
                             shell.test('-f', cacheFilePath),
                             'the cache for eslint should have been created',
                         );
-
-                        // destroy the spy
-                        // sinon.restore();
 
                         eslint =
                         await FlatESLint.fromCLIOptions
@@ -2767,18 +2752,16 @@ describe
                                 ignore: false,
                             },
                         );
-
-                        // create a new spy
-                        // spy = sinon.spy(fs.promises, 'readFile');
+                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
 
                         const [newResult] = await eslint.lintParallel([file]);
 
-                        // assert
-                        // (
-                        //     spy.calledWith(file),
-                        //     'ESLint should have read the file again because it\'s considered ' +
-                        //     'changed because the config changed',
-                        // );
+                        assert
+                        (
+                            newResult.readFileCalled,
+                            'ESLint should have read the file again because it\'s considered ' +
+                            'changed because the config changed',
+                        );
                         assert.strictEqual
                         (
                             newResult.errorCount,
@@ -2829,28 +2812,21 @@ describe
                                 ignore: false,
                             },
                         );
+                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
+                        const file = fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
 
-                        // let spy = sinon.spy(fs.promises, 'readFile');
+                        const results = await eslint.lintParallel([file]);
 
-                        let file = getFixturePath('cache/src', 'test-file.js');
-
-                        file = fs.realpathSync(file);
-
-                        const result = await eslint.lintParallel([file]);
-
-                        // assert
-                        // (
-                        //     spy.calledWith(file),
-                        //     'ESLint should have read the file because there was no cache file',
-                        // );
+                        assert
+                        (
+                            results[0].readFileCalled,
+                            'ESLint should have read the file because there was no cache file',
+                        );
                         assert
                         (
                             shell.test('-f', cacheFilePath),
                             'the cache for eslint should have been created',
                         );
-
-                        // destroy the spy
-                        // sinon.restore();
 
                         eslint =
                         await FlatESLint.fromCLIOptions
@@ -2870,17 +2846,14 @@ describe
                                 ignore: false,
                             },
                         );
+                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
 
-                        // create a new spy
-                        // spy = sinon.spy(fs.promises, 'readFile');
-
-                        const cachedResult = await eslint.lintParallel([file]);
-
-                        assert.deepStrictEqual
-                        (result, cachedResult, 'the result should have been the same');
+                        const cachedResults = await eslint.lintParallel([file]);
 
                         // assert the file was not processed because the cache was used
-                        // assert(!spy.calledWith(file), 'the file should not have been reloaded');
+                        results[0].readFileCalled = false;
+                        assert.deepStrictEqual
+                        (results, cachedResults, 'the result should have been the same');
                     },
                 );
 
@@ -2915,10 +2888,7 @@ describe
                         };
 
                         eslint = await FlatESLint.fromCLIOptions(eslintOptions);
-
-                        let file = getFixturePath('cache/src', 'test-file.js');
-
-                        file = fs.realpathSync(file);
+                        const file = fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
 
                         await eslint.lintParallel([file]);
 

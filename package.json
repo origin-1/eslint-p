@@ -23,7 +23,7 @@
     "@origin-1/eslint-config": "^0.19.0",
     "esprima": "^4.0.1",
     "file-entry-cache": "^7.0.2",
-    "fs-teardown": "^0.1.3",
+    "fs-teardown": "^0.3.2",
     "globals": "^13.23.0",
     "imurmurhash": "^0.1.4",
     "mocha": "^10.2.0",
@@ -32,6 +32,9 @@
   },
   "engines": {
     "node": ">=17"
+  },
+  "imports": {
+    "#patch-flat-eslint-with-cache-test": "./test/_utils/patch-flat-eslint-with-cache-test.js"
   },
   "type": "module"
 }
