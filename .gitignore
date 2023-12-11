@@ -3,4 +3,5 @@
 !.npmrc
 !/test/fixtures/**
 /coverage/
+/grab/
 /node_modules/

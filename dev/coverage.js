@@ -11,8 +11,8 @@ await c8js
     {
         all:            true,
         cwd:            new URL('..', import.meta.url),
+        include:        'lib/**/*.js',
         reporter:       ['html', 'text-summary'],
-        src:            'lib',
         useC8Config:    false,
         watermarks:
         {

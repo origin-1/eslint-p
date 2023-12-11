@@ -4,6 +4,7 @@
   "license": "ISC",
   "files": [
     "ESLint License.txt",
+    "grab",
     "lib"
   ],
   "bin": "lib/eslint-p.js",
@@ -12,10 +13,12 @@
     "url": "git+https://github.com/origin-1/eslint-p.git"
   },
   "scripts": {
+    "build": "npm install && npm run clean && npm run make-grabs && npm run lint && npm run coverage",
     "clean": "node dev/clean.js",
     "coverage": "node dev/coverage.js",
     "lint": "node ./lib/eslint-p.js .",
     "lint:fix": "node ./lib/eslint-p.js . --fix",
+    "make-grabs": "node ./dev/make-grabs.js",
     "test": "mocha test/*.js"
   },
   "dependencies": {
@@ -23,6 +26,7 @@
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^0.19.0",
+    "acorn": "^8.11.2",
     "c8js": "^0.6.0",
     "esprima": "^4.0.1",
     "file-entry-cache": "^7.0.2",

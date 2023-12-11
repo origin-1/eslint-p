@@ -13,7 +13,7 @@ const nodeESMGlobals =
 
 export default createFlatConfig
 (
-    { ignores: ['test/fixtures'] },
+    { ignores: ['coverage', 'grab', 'test/fixtures'] },
     {
         jsVersion:          2022,
         languageOptions:    { globals: nodeESMGlobals, sourceType: 'module' },

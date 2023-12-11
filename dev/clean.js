@@ -6,4 +6,5 @@ import { fileURLToPath }    from 'node:url';
 
 const workspaceFolder = join(fileURLToPath(import.meta.url), '../..');
 process.chdir(workspaceFolder);
-await rm('coverage', { force: true, recursive: true });
+const promises = ['coverage', 'grab'].map(path => rm(path, { force: true, recursive: true }));
+await Promise.all(promises);
