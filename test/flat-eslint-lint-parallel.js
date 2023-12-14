@@ -1,17 +1,20 @@
 /* globals after, afterEach, before, beforeEach, describe, it */
 
-import assert                               from 'node:assert';
-import fs                                   from 'node:fs';
-import fsp                                  from 'node:fs/promises';
-import os                                   from 'node:os';
-import path                                 from 'node:path';
-import { fileURLToPath }                    from 'node:url';
-import eslintDirURL                         from '../lib/default-eslint-dir-url.js';
-import patchFlatESLint                      from '../lib/patch-flat-eslint.js';
-import { createCustomTeardown, unIndent }   from './_utils/index.js';
-import fCache                               from 'file-entry-cache';
-import murmur                               from 'imurmurhash';
-import shell                                from 'shelljs';
+import assert                                           from 'node:assert';
+
+import { mkdirSync, readFileSync, realpathSync, rmSync, statSync, unlinkSync, writeFileSync }
+from 'node:fs';
+
+import { rm }                                           from 'node:fs/promises';
+import { platform, tmpdir }                             from 'node:os';
+import { basename, dirname, join, relative, resolve }   from 'node:path';
+import { fileURLToPath }                                from 'node:url';
+import eslintDirURL                                     from '../lib/default-eslint-dir-url.js';
+import patchFlatESLint                                  from '../lib/patch-flat-eslint.js';
+import { createCustomTeardown, unIndent }               from './_utils/index.js';
+import fCache                                           from 'file-entry-cache';
+import murmur                                           from 'imurmurhash';
+import shell                                            from 'shelljs';
 
 async function getFlatESLint()
 {
@@ -25,7 +28,7 @@ const FlatESLint = await getFlatESLint();
 const examplePluginName = 'eslint-plugin-example';
 const examplePluginNameWithNamespace = '@eslint/eslint-plugin-example';
 const examplePreprocessorName = 'eslint-plugin-processor';
-const fixtureDir = path.resolve(fs.realpathSync(os.tmpdir()), 'eslint/fixtures');
+const fixtureDir = join(realpathSync(tmpdir()), 'eslint/fixtures');
 const originalDir = process.cwd();
 
 /**
@@ -47,11 +50,11 @@ function ensureDirectoryExists(dirPath)
 {
     try
     {
-        fs.statSync(dirPath);
+        statSync(dirPath);
     }
     catch
     {
-        fs.mkdirSync(dirPath);
+        mkdirSync(dirPath);
     }
 }
 
@@ -63,15 +66,8 @@ function ensureDirectoryExists(dirPath)
  */
 function getFixturePath(...args)
 {
-    const filepath = path.join(fixtureDir, ...args);
-    try
-    {
-        return fs.realpathSync(filepath);
-    }
-    catch
-    {
-        return filepath;
-    }
+    const filepath = join(fixtureDir, ...args);
+    return filepath;
 }
 
 /**
@@ -112,11 +108,11 @@ describe
             function ()
             {
                 /*
-                * GitHub Actions Windows and macOS runners occasionally exhibit
-                * extremely slow filesystem operations, during which copying fixtures
-                * exceeds the default test timeout, so raise it just for this hook.
-                * Mocha uses `this` to set timeouts on an individual hook level.
-                */
+                 * GitHub Actions Windows and macOS runners occasionally exhibit
+                 * extremely slow filesystem operations, during which copying fixtures
+                 * exceeds the default test timeout, so raise it just for this hook.
+                 * Mocha uses `this` to set timeouts on an individual hook level.
+                 */
                 this.timeout(60 * 1000);
                 shell.mkdir('-p', fixtureDir);
                 shell.cp('-r', './test/fixtures/.', fixtureDir);
@@ -345,7 +341,7 @@ describe
                 await FlatESLint.fromCLIOptions
                 (
                     {
-                        cwd:                path.join(fixtureDir, '..'),
+                        cwd:                join(fixtureDir, '..'),
                         config:             getFixturePath('eslint.config.js'),
                         overrideConfig:     { files: ['**/*.js2'] },
                     },
@@ -895,7 +891,7 @@ describe
                 (
                     {
                         ignore:         false,
-                        cwd:            path.join(fixtureDir, '..'),
+                        cwd:            join(fixtureDir, '..'),
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
                         config:         getFixturePath('eslint.config.js'),
                     },
@@ -940,7 +936,7 @@ describe
         );
 
         // only works on a Windows machine
-        if (os.platform() === 'win32')
+        if (platform() === 'win32')
         {
             it
             (
@@ -1418,7 +1414,7 @@ describe
                                 overrideConfig: { rules: { 'no-undef': 2 } },
                             },
                         );
-                        const filePath = fs.realpathSync(getFixturePath('undef.js'));
+                        const filePath = getFixturePath('undef.js');
                         const results = await eslint.lintParallel([filePath]);
 
                         assert.strictEqual(results.length, 1);
@@ -1666,7 +1662,7 @@ describe
                     {
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
                         ignore:         false,
-                        cwd:            path.join(fixtureDir, '..'),
+                        cwd:            join(fixtureDir, '..'),
                     },
                 );
                 const results = await eslint.lintParallel(['fixtures/files/*.?s*']);
@@ -1720,7 +1716,7 @@ describe
                 await FlatESLint.fromCLIOptions
                 (
                     {
-                        cwd: path.join(fixtureDir, '..'),
+                        cwd: join(fixtureDir, '..'),
                         overrideConfig:
                         {
                             rules:
@@ -1736,7 +1732,7 @@ describe
                 const results = await eslint.lintParallel([formattersDir]);
 
                 assert.strictEqual(results.length, 5);
-                assert.strictEqual(path.relative(formattersDir, results[0].filePath), 'async.js');
+                assert.strictEqual(relative(formattersDir, results[0].filePath), 'async.js');
                 assert.strictEqual(results[0].errorCount, 0);
                 assert.strictEqual(results[0].warningCount, 0);
                 assert.strictEqual(results[0].fatalErrorCount, 0);
@@ -1744,7 +1740,7 @@ describe
                 assert.strictEqual(results[0].fixableWarningCount, 0);
                 assert.strictEqual(results[0].messages.length, 0);
                 assert.strictEqual(results[0].suppressedMessages.length, 0);
-                assert.strictEqual(path.relative(formattersDir, results[1].filePath), 'broken.js');
+                assert.strictEqual(relative(formattersDir, results[1].filePath), 'broken.js');
                 assert.strictEqual(results[1].errorCount, 0);
                 assert.strictEqual(results[1].warningCount, 0);
                 assert.strictEqual(results[1].fatalErrorCount, 0);
@@ -1752,7 +1748,7 @@ describe
                 assert.strictEqual(results[1].fixableWarningCount, 0);
                 assert.strictEqual(results[1].messages.length, 0);
                 assert.strictEqual(results[1].suppressedMessages.length, 0);
-                assert.strictEqual(path.relative(formattersDir, results[2].filePath), 'cwd.js');
+                assert.strictEqual(relative(formattersDir, results[2].filePath), 'cwd.js');
                 assert.strictEqual(results[2].errorCount, 0);
                 assert.strictEqual(results[2].warningCount, 0);
                 assert.strictEqual(results[2].fatalErrorCount, 0);
@@ -1760,7 +1756,7 @@ describe
                 assert.strictEqual(results[2].fixableWarningCount, 0);
                 assert.strictEqual(results[2].messages.length, 0);
                 assert.strictEqual(results[2].suppressedMessages.length, 0);
-                assert.strictEqual(path.relative(formattersDir, results[3].filePath), 'simple.js');
+                assert.strictEqual(relative(formattersDir, results[3].filePath), 'simple.js');
                 assert.strictEqual(results[3].errorCount, 0);
                 assert.strictEqual(results[3].warningCount, 0);
                 assert.strictEqual(results[3].fatalErrorCount, 0);
@@ -1769,7 +1765,7 @@ describe
                 assert.strictEqual(results[3].messages.length, 0);
                 assert.strictEqual(results[3].suppressedMessages.length, 0);
                 assert.strictEqual
-                (path.relative(formattersDir, results[4].filePath), path.join('test', 'simple.js'));
+                (relative(formattersDir, results[4].filePath), join('test', 'simple.js'));
                 assert.strictEqual(results[4].errorCount, 0);
                 assert.strictEqual(results[4].warningCount, 0);
                 assert.strictEqual(results[4].fatalErrorCount, 0);
@@ -1789,12 +1785,11 @@ describe
                 await FlatESLint.fromCLIOptions
                 (
                     {
-                        cwd:    path.join(fixtureDir, '..'),
+                        cwd:    join(fixtureDir, '..'),
                         config: getFixturePath('configurations', 'env-browser.js'),
                     },
                 );
-                const results =
-                await eslint.lintParallel([fs.realpathSync(getFixturePath('globals-browser.js'))]);
+                const results = await eslint.lintParallel([getFixturePath('globals-browser.js')]);
 
                 assert.strictEqual(results.length, 1);
                 assert.strictEqual(results[0].messages.length, 0, 'Should have no messages.');
@@ -1811,7 +1806,7 @@ describe
                 await FlatESLint.fromCLIOptions
                 (
                     {
-                        cwd: path.join(fixtureDir, '..'),
+                        cwd: join(fixtureDir, '..'),
                         overrideConfig:
                         {
                             languageOptions: { globals: { window: false } },
@@ -1823,8 +1818,7 @@ describe
                         },
                     },
                 );
-                const results =
-                await eslint.lintParallel([fs.realpathSync(getFixturePath('globals-browser.js'))]);
+                const results = await eslint.lintParallel([getFixturePath('globals-browser.js')]);
 
                 assert.strictEqual(results.length, 1);
                 assert.strictEqual(results[0].messages.length, 0);
@@ -1842,12 +1836,11 @@ describe
                 await FlatESLint.fromCLIOptions
                 (
                     {
-                        cwd:    path.join(fixtureDir, '..'),
+                        cwd:    join(fixtureDir, '..'),
                         config: getFixturePath('configurations', 'env-node.js'),
                     },
                 );
-                const results =
-                await eslint.lintParallel([fs.realpathSync(getFixturePath('globals-node.js'))]);
+                const results = await eslint.lintParallel([getFixturePath('globals-node.js')]);
 
                 assert.strictEqual(results.length, 1);
                 assert.strictEqual(results[0].messages.length, 0, 'Should have no messages.');
@@ -1864,14 +1857,14 @@ describe
                 await FlatESLint.fromCLIOptions
                 (
                     {
-                        cwd:            path.join(fixtureDir, '..'),
+                        cwd:            join(fixtureDir, '..'),
                         config:         getFixturePath('eslint.config.js'),
                         ignore:         false,
                         overrideConfig: { rules: { semi: 2 } },
                     },
                 );
-                const failFilePath = fs.realpathSync(getFixturePath('missing-semicolon.js'));
-                const passFilePath = fs.realpathSync(getFixturePath('passing.js'));
+                const failFilePath = getFixturePath('missing-semicolon.js');
+                const passFilePath = getFixturePath('passing.js');
 
                 let results = await eslint.lintParallel([failFilePath]);
 
@@ -1925,7 +1918,7 @@ describe
                         ignore: false,
                     },
                 );
-                const filePath = fs.realpathSync(getFixturePath('missing-semicolon.js'));
+                const filePath = getFixturePath('missing-semicolon.js');
                 const results = await eslint.lintParallel([filePath]);
 
                 assert.strictEqual(results.length, 1);
@@ -2044,7 +2037,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd: path.join(fixtureDir, '..'),
+                                cwd: join(fixtureDir, '..'),
                                 fix: true,
                             },
                         );
@@ -2052,7 +2045,7 @@ describe
                         const outputPath =
                         getFixturePath('autofix/semicolon-conflicting-fixes.expected.js');
                         const results = await eslint.lintParallel([inputPath]);
-                        const expectedOutput = fs.readFileSync(outputPath, 'utf8');
+                        const expectedOutput = readFileSync(outputPath, 'utf8');
 
                         assert.strictEqual(results[0].output, expectedOutput);
                     },
@@ -2067,7 +2060,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd: path.join(fixtureDir, '..'),
+                                cwd: join(fixtureDir, '..'),
                                 fix: true,
                             },
                         );
@@ -2075,7 +2068,7 @@ describe
                         const outputPath =
                         getFixturePath('autofix/return-conflicting-fixes.expected.js');
                         const results = await eslint.lintParallel([inputPath]);
-                        const expectedOutput = fs.readFileSync(outputPath, 'utf8');
+                        const expectedOutput = readFileSync(outputPath, 'utf8');
 
                         assert.strictEqual(results[0].output, expectedOutput);
                     },
@@ -2102,7 +2095,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd: path.join(fixtureDir, '..'),
+                                cwd: join(fixtureDir, '..'),
                                 fix: true,
                                 overrideConfig:
                                 {
@@ -2117,9 +2110,7 @@ describe
                                 },
                             },
                         );
-                        const results =
-                        await eslint.lintParallel
-                        ([path.resolve(fixtureDir, `${fixtureDir}/fixmode`)]);
+                        const results = await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
 
                         results.forEach(convertCRLF);
                         assert.deepStrictEqual
@@ -2128,16 +2119,40 @@ describe
                             [
                                 {
                                     filePath:
-                                    fs.realpathSync
-                                    (path.resolve(fixtureDir, 'fixmode/multipass.js')),
-                                    messages:            [],
-                                    suppressedMessages:  [],
-                                    errorCount:          0,
-                                    warningCount:        0,
-                                    fatalErrorCount:     0,
-                                    fixableErrorCount:   0,
-                                    fixableWarningCount: 0,
-                                    output:              'true ? "yes" : "no";\n',
+                                    join(fixtureDir, 'fixmode/multipass.js'),
+                                    messages:               [],
+                                    suppressedMessages:     [],
+                                    errorCount:             0,
+                                    warningCount:           0,
+                                    fatalErrorCount:        0,
+                                    fixableErrorCount:      0,
+                                    fixableWarningCount:    0,
+                                    output:                 'true ? "yes" : "no";\n',
+                                    usedDeprecatedRules:
+                                    [
+                                        {
+                                            replacedBy: [],
+                                            ruleId:     'semi',
+                                        },
+                                        {
+                                            replacedBy: [],
+                                            ruleId:     'quotes',
+                                        },
+                                        {
+                                            replacedBy: [],
+                                            ruleId:     'space-infix-ops',
+                                        },
+                                    ],
+                                },
+                                {
+                                    filePath:               join(fixtureDir, 'fixmode/ok.js'),
+                                    messages:               [],
+                                    suppressedMessages:     [],
+                                    errorCount:             0,
+                                    warningCount:           0,
+                                    fatalErrorCount:        0,
+                                    fixableErrorCount:      0,
+                                    fixableWarningCount:    0,
                                     usedDeprecatedRules:
                                     [
                                         {
@@ -2156,34 +2171,7 @@ describe
                                 },
                                 {
                                     filePath:
-                                    fs.realpathSync(path.resolve(fixtureDir, 'fixmode/ok.js')),
-                                    messages:            [],
-                                    suppressedMessages:  [],
-                                    errorCount:          0,
-                                    warningCount:        0,
-                                    fatalErrorCount:     0,
-                                    fixableErrorCount:   0,
-                                    fixableWarningCount: 0,
-                                    usedDeprecatedRules:
-                                    [
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'semi',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'quotes',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'space-infix-ops',
-                                        },
-                                    ],
-                                },
-                                {
-                                    filePath:
-                                    fs.realpathSync
-                                    (path.resolve(fixtureDir, 'fixmode/quotes-semi-eqeqeq.js')),
+                                    join(fixtureDir, 'fixmode/quotes-semi-eqeqeq.js'),
                                     messages:
                                     [
                                         {
@@ -2198,12 +2186,12 @@ describe
                                             severity:  2,
                                         },
                                     ],
-                                    suppressedMessages:  [],
-                                    errorCount:          1,
-                                    warningCount:        0,
-                                    fatalErrorCount:     0,
-                                    fixableErrorCount:   0,
-                                    fixableWarningCount: 0,
+                                    suppressedMessages:     [],
+                                    errorCount:             1,
+                                    warningCount:           0,
+                                    fatalErrorCount:        0,
+                                    fixableErrorCount:      0,
+                                    fixableWarningCount:    0,
                                     output:
                                     'var msg = "hi";\nif (msg == "hi") {\n\n}\n',
                                     usedDeprecatedRules:
@@ -2224,7 +2212,7 @@ describe
                                 },
                                 {
                                     filePath:
-                                    fs.realpathSync(path.resolve(fixtureDir, 'fixmode/quotes.js')),
+                                    join(fixtureDir, 'fixmode/quotes.js'),
                                     messages:
                                     [
                                         {
@@ -2239,13 +2227,13 @@ describe
                                             severity:  2,
                                         },
                                     ],
-                                    suppressedMessages:  [],
-                                    errorCount:          1,
-                                    warningCount:        0,
-                                    fatalErrorCount:     0,
-                                    fixableErrorCount:   0,
-                                    fixableWarningCount: 0,
-                                    output:              'var msg = "hi" + foo;\n',
+                                    suppressedMessages:     [],
+                                    errorCount:             1,
+                                    warningCount:           0,
+                                    fatalErrorCount:        0,
+                                    fixableErrorCount:      0,
+                                    fixableWarningCount:    0,
+                                    output:                 'var msg = "hi" + foo;\n',
                                     usedDeprecatedRules:
                                     [
                                         {
@@ -2275,7 +2263,7 @@ describe
                     {
                         const baseOptions =
                         {
-                            cwd: path.join(fixtureDir, '..'),
+                            cwd: join(fixtureDir, '..'),
                             overrideConfig:
                             {
                                 rules:
@@ -2293,15 +2281,13 @@ describe
                         await FlatESLint.fromCLIOptions
                         ({ ...baseOptions, cache: true, fix: false });
                         // Do initial lint run and populate the cache file
-                        await eslint.lintParallel
-                        ([path.resolve(fixtureDir, `${fixtureDir}/fixmode`)]);
+                        await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
 
                         eslint =
                         await FlatESLint.fromCLIOptions
                         ({ ...baseOptions, cache: true, fix: true });
                         const results =
-                        await eslint.lintParallel
-                        ([path.resolve(fixtureDir, `${fixtureDir}/fixmode`)]);
+                        await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
 
                         assert(results.some(result => result.output));
                     },
@@ -2324,13 +2310,13 @@ describe
                         await eslintWithPlugins
                         (
                             {
-                                cwd:    path.resolve(fixtureDir, '..'),
+                                cwd:    join(fixtureDir, '..'),
                                 config: getFixturePath('configurations', 'plugins-with-prefix.js'),
                             },
                         );
                         const results =
                         await eslint.lintParallel
-                        ([fs.realpathSync(getFixturePath('rules', 'test/test-custom-rule.js'))]);
+                        ([getFixturePath('rules', 'test/test-custom-rule.js')]);
 
                         assert.strictEqual(results.length, 1);
                         assert.strictEqual(results[0].messages.length, 2, 'Expected two messages.');
@@ -2349,13 +2335,13 @@ describe
                         await eslintWithPlugins
                         (
                             {
-                                cwd:            path.resolve(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 overrideConfig: { rules: { 'example/example-rule': 1 } },
                             },
                         );
                         const results =
                         await eslint.lintParallel
-                        ([fs.realpathSync(getFixturePath('rules', 'test', 'test-custom-rule.js'))]);
+                        ([getFixturePath('rules', 'test', 'test-custom-rule.js')]);
 
                         assert.strictEqual(results.length, 1);
                         assert.strictEqual(results[0].messages.length, 2);
@@ -2374,7 +2360,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:                        path.resolve(fixtureDir, '..'),
+                                cwd:                        join(fixtureDir, '..'),
                                 overrideConfig:             { rules: { 'test/example-rule': 1 } },
                                 plugin:                     ['test'],
                                 resolvePluginsRelativeTo:   getFixturePath('plugins'),
@@ -2382,7 +2368,7 @@ describe
                         );
                         const results =
                         await eslint.lintParallel
-                        ([fs.realpathSync(getFixturePath('rules', 'test', 'test-custom-rule.js'))]);
+                        ([getFixturePath('rules', 'test', 'test-custom-rule.js')]);
 
                         assert.strictEqual(results.length, 1);
                         assert.strictEqual(results[0].messages.length, 2);
@@ -2407,7 +2393,7 @@ describe
                 {
                     try
                     {
-                        fs.unlinkSync(filePath);
+                        unlinkSync(filePath);
                     }
                     catch
                     {
@@ -2452,9 +2438,9 @@ describe
                         {
                             try
                             {
-                                fs.rmSync
+                                rmSync
                                 (
-                                    path.resolve(cwd, 'tmp/.cacheFileDir/'),
+                                    join(cwd, 'tmp/.cacheFileDir/'),
                                     { recursive: true, force: true },
                                 );
                             }
@@ -2491,8 +2477,7 @@ describe
                             {
                                 assert
                                 (
-                                    !shell.test
-                                    ('-d', path.resolve(cwd, './tmp/.cacheFileDir/')),
+                                    !shell.test('-d', join(cwd, './tmp/.cacheFileDir/')),
                                     'the cache directory already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
@@ -2525,8 +2510,7 @@ describe
                                     shell.test
                                     (
                                         '-f',
-                                        path.resolve
-                                        (cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
+                                        join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
                                     ),
                                     'the cache for eslint should have been created',
                                 );
@@ -2541,13 +2525,12 @@ describe
                             {
                                 assert
                                 (
-                                    !shell.test('-d', path.resolve(cwd, './tmp/.cacheFileDir/')),
+                                    !shell.test('-d', join(cwd, './tmp/.cacheFileDir/')),
                                     'the cache directory already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
 
-                                fs.mkdirSync
-                                (path.resolve(cwd, './tmp/.cacheFileDir/'), { recursive: true });
+                                mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
 
                                 eslint =
                                 await FlatESLint.fromCLIOptions
@@ -2577,8 +2560,7 @@ describe
                                     shell.test
                                     (
                                         '-f',
-                                        path.resolve
-                                        (cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
+                                        join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
                                     ),
                                     'the cache for eslint should have been created',
                                 );
@@ -2593,13 +2575,12 @@ describe
                             {
                                 assert
                                 (
-                                    !shell.test('-d', path.resolve(cwd, './tmp/.cacheFileDir/')),
+                                    !shell.test('-d', join(cwd, './tmp/.cacheFileDir/')),
                                     'the cache directory already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
 
-                                fs.mkdirSync
-                                (path.resolve(cwd, './tmp/.cacheFileDir/'), { recursive: true });
+                                mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
 
                                 eslint =
                                 await FlatESLint.fromCLIOptions
@@ -2629,8 +2610,7 @@ describe
                                     shell.test
                                     (
                                         '-f',
-                                        path.resolve
-                                        (cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
+                                        join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
                                     ),
                                     'the cache for eslint should have been created',
                                 );
@@ -2644,9 +2624,9 @@ describe
                     'should create the cache file inside cwd when no cacheLocation provided',
                     async () =>
                     {
-                        const cwd = path.resolve(getFixturePath('cli-engine'));
+                        const cwd = getFixturePath('cli-engine');
 
-                        cacheFilePath = path.resolve(cwd, '.eslintcache');
+                        cacheFilePath = join(cwd, '.eslintcache');
                         doDelete(cacheFilePath);
                         assert
                         (
@@ -2683,7 +2663,7 @@ describe
                     {
                         const cwd = getFixturePath('cache/src');
 
-                        cacheFilePath = path.resolve(cwd, '.eslintcache');
+                        cacheFilePath = join(cwd, '.eslintcache');
                         doDelete(cacheFilePath);
                         assert
                         (
@@ -2710,7 +2690,7 @@ describe
                             },
                         );
                         eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
-                        const file = fs.realpathSync(path.join(cwd, 'test-file.js'));
+                        const file = join(cwd, 'test-file.js');
 
                         const results = await eslint.lintParallel([file]);
 
@@ -2786,7 +2766,7 @@ describe
                     {
                         const cwd = getFixturePath('cache/src');
 
-                        cacheFilePath = path.resolve(cwd, '.eslintcache');
+                        cacheFilePath = join(cwd, '.eslintcache');
                         doDelete(cacheFilePath);
                         assert
                         (
@@ -2813,7 +2793,7 @@ describe
                             },
                         );
                         eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
-                        const file = fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                        const file = getFixturePath('cache/src', 'test-file.js');
 
                         const results = await eslint.lintParallel([file]);
 
@@ -2884,11 +2864,11 @@ describe
                                     'no-unused-vars': 2,
                                 },
                             },
-                            cwd:            path.join(fixtureDir, '..'),
+                            cwd:            join(fixtureDir, '..'),
                         };
 
                         eslint = await FlatESLint.fromCLIOptions(eslintOptions);
-                        const file = fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                        const file = getFixturePath('cache/src', 'test-file.js');
 
                         await eslint.lintParallel([file]);
 
@@ -2930,7 +2910,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
@@ -2944,10 +2924,8 @@ describe
                                 },
                             },
                         );
-                        const badFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
-                        const goodFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                        const badFile = getFixturePath('cache/src', 'fail-file.js');
+                        const goodFile = getFixturePath('cache/src', 'test-file.js');
                         const result = await eslint.lintParallel([badFile, goodFile]);
                         const [badFileResult, goodFileResult] = result;
 
@@ -3009,7 +2987,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
@@ -3023,12 +3001,9 @@ describe
                                 },
                             },
                         );
-                        const badFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
-                        const goodFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
-                        const toBeDeletedFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'file-to-delete.js'));
+                        const badFile = getFixturePath('cache/src', 'fail-file.js');
+                        const goodFile = getFixturePath('cache/src', 'test-file.js');
+                        const toBeDeletedFile = getFixturePath('cache/src', 'file-to-delete.js');
 
                         await eslint.lintParallel([badFile, goodFile, toBeDeletedFile]);
                         const fileCache = fCache.createFromFile(cacheFilePath);
@@ -3042,7 +3017,7 @@ describe
                         );
 
                         // delete the file from the file system
-                        fs.unlinkSync(toBeDeletedFile);
+                        unlinkSync(toBeDeletedFile);
 
                         /*
                          * file-entry-cache@2.0.0 will remove from the cache deleted files
@@ -3050,7 +3025,7 @@ describe
                          */
                         await eslint.lintParallel([badFile, goodFile]);
 
-                        cache = JSON.parse(fs.readFileSync(cacheFilePath));
+                        cache = JSON.parse(readFileSync(cacheFilePath));
 
                         assert.strictEqual
                         (
@@ -3094,7 +3069,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
@@ -3108,12 +3083,9 @@ describe
                                 },
                             },
                         );
-                        const badFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
-                        const goodFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
-                        const testFile2 =
-                        fs.realpathSync(getFixturePath('cache/src', 'test-file2.js'));
+                        const badFile = getFixturePath('cache/src', 'fail-file.js');
+                        const goodFile = getFixturePath('cache/src', 'test-file.js');
+                        const testFile2 = getFixturePath('cache/src', 'test-file2.js');
 
                         await eslint.lintParallel([badFile, goodFile, testFile2]);
 
@@ -3159,13 +3131,13 @@ describe
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
-                        fs.writeFileSync(cacheFilePath, '');
+                        writeFileSync(cacheFilePath, '');
 
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
                                 overrideConfig:
@@ -3207,13 +3179,13 @@ describe
                         );
 
                         // intenationally invalid to additionally make sure it isn't used
-                        fs.writeFileSync(cacheFilePath, '[]');
+                        writeFileSync(cacheFilePath, '[]');
 
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 cacheLocation:  cacheFilePath,
                                 overrideConfig:
                                 {
@@ -3245,7 +3217,7 @@ describe
                     'should use the specified cache file',
                     async () =>
                     {
-                        cacheFilePath = path.resolve('.cache/custom-cache');
+                        cacheFilePath = resolve('.cache/custom-cache');
                         doDelete(cacheFilePath);
                         assert
                         (
@@ -3269,13 +3241,11 @@ describe
                                         'no-unused-vars': 2,
                                     },
                                 },
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                             },
                         );
-                        const badFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
-                        const goodFile =
-                        fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                        const badFile = getFixturePath('cache/src', 'fail-file.js');
+                        const goodFile = getFixturePath('cache/src', 'test-file.js');
                         const result = await eslint.lintParallel([badFile, goodFile]);
 
                         assert
@@ -3325,7 +3295,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
@@ -3339,8 +3309,7 @@ describe
                             },
                         );
 
-                        const filePath =
-                        fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                        const filePath = getFixturePath('cache/src', 'test-file.js');
 
                         /*
                          * Run linting on the same file 3 times to cover multiple cases:
@@ -3413,7 +3382,7 @@ describe
                         await FlatESLint.fromCLIOptions
                         (
                             {
-                                cwd:            path.join(fixtureDir, '..'),
+                                cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
@@ -3421,8 +3390,7 @@ describe
                             },
                         );
 
-                        const filePath =
-                        fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
+                        const filePath = getFixturePath('cache/src', 'fail-file.js');
 
                         /*
                          * Run linting on the same file 3 times to cover multiple cases:
@@ -3501,7 +3469,7 @@ describe
                                 await FlatESLint.fromCLIOptions
                                 (
                                     {
-                                        cwd:            path.join(fixtureDir, '..'),
+                                        cwd:            join(fixtureDir, '..'),
                                         // specifying cache true the cache will be created
                                         cache:          true,
                                         cacheLocation:  cacheFilePath,
@@ -3516,10 +3484,8 @@ describe
                                         },
                                     },
                                 );
-                                const badFile =
-                                fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
-                                const goodFile =
-                                fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                                const badFile = getFixturePath('cache/src', 'fail-file.js');
+                                const goodFile = getFixturePath('cache/src', 'test-file.js');
 
                                 await eslint.lintParallel([badFile, goodFile]);
                                 let fileCache = fCache.createFromFile(cacheFilePath);
@@ -3573,7 +3539,7 @@ describe
                                 await FlatESLint.fromCLIOptions
                                 (
                                     {
-                                        cwd:            path.join(fixtureDir, '..'),
+                                        cwd:            join(fixtureDir, '..'),
                                         // specifying cache true the cache will be created
                                         cache:          true,
                                         cacheLocation:  cacheFilePath,
@@ -3588,10 +3554,8 @@ describe
                                         },
                                     },
                                 );
-                                const badFile =
-                                fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
-                                const goodFile =
-                                fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                                const badFile = getFixturePath('cache/src', 'fail-file.js');
+                                const goodFile = getFixturePath('cache/src', 'test-file.js');
 
                                 await eslint.lintParallel([badFile, goodFile]);
                                 let fileCache = fCache.createFromFile(cacheFilePath, true);
@@ -3648,7 +3612,7 @@ describe
                                 await FlatESLint.fromCLIOptions
                                 (
                                     {
-                                        cwd:            path.join(fixtureDir, '..'),
+                                        cwd:            join(fixtureDir, '..'),
                                         // specifying cache true the cache will be created
                                         cache:          true,
                                         cacheLocation:  cacheFilePath,
@@ -3664,12 +3628,10 @@ describe
 
                                     },
                                 );
-                                const badFile =
-                                fs.realpathSync(getFixturePath('cache/src', 'fail-file.js'));
-                                const goodFile =
-                                fs.realpathSync(getFixturePath('cache/src', 'test-file.js'));
+                                const badFile = getFixturePath('cache/src', 'fail-file.js');
+                                const goodFile = getFixturePath('cache/src', 'test-file.js');
                                 const goodFileCopy =
-                                path.resolve(`${path.dirname(goodFile)}`, 'test-file-copy.js');
+                                join(`${dirname(goodFile)}`, 'test-file-copy.js');
 
                                 shell.cp(goodFile, goodFileCopy);
 
@@ -3742,17 +3704,12 @@ describe
                                 ],
                                 plugin:                     ['test-processor-1'],
                                 resolvePluginsRelativeTo:   getFixturePath('plugins'),
-                                cwd:                        path.join(fixtureDir, '..'),
+                                cwd:                        join(fixtureDir, '..'),
                             },
                         );
                         const results =
                         await eslint.lintParallel
-                        (
-                            [
-                                fs.realpathSync
-                                (getFixturePath('processors', 'test', 'test-processor.txt')),
-                            ],
-                        );
+                        ([getFixturePath('processors', 'test', 'test-processor.txt')]);
 
                         assert.strictEqual(results.length, 1);
                         assert.strictEqual(results[0].messages.length, 2);
@@ -3787,7 +3744,7 @@ describe
                                 ],
                                 plugin:                     ['test-processor-2'],
                                 resolvePluginsRelativeTo:   getFixturePath('plugins'),
-                                cwd:                        path.join(fixtureDir, '..'),
+                                cwd:                        join(fixtureDir, '..'),
                             },
                         );
                         const results =
@@ -3922,11 +3879,11 @@ describe
             'multiple processors',
             () =>
             {
-                const root = path.join(os.tmpdir(), 'eslint/eslint/multiple-processors');
+                const root = join(tmpdir(), 'eslint/eslint/multiple-processors');
                 const commonFiles =
                 {
                     'node_modules/pattern-processor/index.js':
-                    fs.readFileSync
+                    readFileSync
                     (
                         new URL('./fixtures/processors/pattern-processor.js', import.meta.url),
                         'utf8',
@@ -3983,7 +3940,7 @@ describe
                     },
                 );
 
-                afterEach(async () => await fsp.rm(root, { recursive: true, force: true }));
+                afterEach(async () => await rm(root, { recursive: true, force: true }));
 
                 it
                 (
@@ -3994,7 +3951,7 @@ describe
                         createCustomTeardown
                         (
                             {
-                                cwd: path.join(root, id),
+                                cwd: join(root, id),
                                 files:
                                 {
                                     ...commonFiles,
@@ -4051,7 +4008,7 @@ describe
                         createCustomTeardown
                         (
                             {
-                                cwd: path.join(root, id),
+                                cwd: join(root, id),
                                 files:
                                 {
                                     ...commonFiles,
@@ -4118,7 +4075,7 @@ describe
                         createCustomTeardown
                         (
                             {
-                                cwd: path.join(root, id),
+                                cwd: join(root, id),
                                 files:
                                 {
                                     ...commonFiles,
@@ -4195,7 +4152,7 @@ describe
                         createCustomTeardown
                         (
                             {
-                                cwd: path.join(root, id),
+                                cwd: join(root, id),
                                 files:
                                 {
                                     ...commonFiles,
@@ -4266,7 +4223,7 @@ describe
                         createCustomTeardown
                         (
                             {
-                                cwd: path.join(root, id),
+                                cwd: join(root, id),
                                 files:
                                 {
                                     ...commonFiles,
@@ -4342,7 +4299,7 @@ describe
                         createCustomTeardown
                         (
                             {
-                                cwd: path.join(root, id),
+                                cwd: join(root, id),
                                 files:
                                 {
                                     ...commonFiles,
@@ -4438,7 +4395,7 @@ describe
                             },
                         );
                         const results = await eslint.lintParallel(['[ab].js']);
-                        const filenames = results.map(r => path.basename(r.filePath));
+                        const filenames = results.map(r => basename(r.filePath));
 
                         assert.deepStrictEqual(filenames, ['[ab].js']);
                     },
@@ -4475,7 +4432,7 @@ describe
                             },
                         );
                         const results = await eslint.lintParallel(['[ab].js']);
-                        const filenames = results.map(r => path.basename(r.filePath));
+                        const filenames = results.map(r => basename(r.filePath));
 
                         assert.deepStrictEqual(filenames, ['a.js', 'b.js']);
                     },
