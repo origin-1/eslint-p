@@ -5,7 +5,7 @@ import assert                                           from 'node:assert';
 import { mkdirSync, readFileSync, realpathSync, rmSync, statSync, unlinkSync, writeFileSync }
 from 'node:fs';
 
-import { rm }                                           from 'node:fs/promises';
+import fsPromises, { rm }                               from 'node:fs/promises';
 import { platform, tmpdir }                             from 'node:os';
 import { basename, dirname, join, relative, resolve }   from 'node:path';
 import { fileURLToPath }                                from 'node:url';
@@ -15,6 +15,7 @@ import { createCustomTeardown, unIndent }               from './_utils/index.js'
 import fCache                                           from 'file-entry-cache';
 import murmur                                           from 'imurmurhash';
 import shell                                            from 'shelljs';
+import sinon                                            from 'sinon';
 
 async function getFlatESLint()
 {
@@ -120,12 +121,7 @@ describe
         );
 
         after
-        (
-            () =>
-            {
-                shell.rm('-r', fixtureDir);
-            },
-        );
+        (() => { shell.rm('-r', fixtureDir); });
 
         it
         (
@@ -134,7 +130,6 @@ describe
             {
                 const parserURL =
                 new URL('./fixtures/configurations/parser/custom.js', import.meta.url);
-
                 eslint =
                 await FlatESLint.fromCLIOptions
                 (
@@ -144,7 +139,6 @@ describe
                         parser: fileURLToPath(parserURL),
                     },
                 );
-
                 const results = await eslint.lintParallel([fileURLToPath(import.meta.url)]);
 
                 assert.strictEqual(results.length, 1);
@@ -323,7 +317,6 @@ describe
                 eslint =
                 await FlatESLint.fromCLIOptions
                 ({ overrideConfig: { languageOptions: { parser: 'test11' } } });
-
                 await assert.rejects
                 (
                     async () => await eslint.lintParallel(['lib/eslint-p.js']),
@@ -610,13 +603,10 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['subdir1', 'doesnotexist/*.js']);
-                            },
+                            { await eslint.lintParallel(['subdir1', 'doesnotexist/*.js']); },
                             /No files matching 'doesnotexist\/\*\.js' were found/u,
                         );
                     },
@@ -637,13 +627,10 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']);
-                            },
+                            { await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']); },
                             /All files matched by 'subdir2\/\*\.js' are ignored/u,
                         );
                     },
@@ -664,13 +651,10 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']);
-                            },
+                            { await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']); },
                             /All files matched by 'subdir2\/\*\.js' are ignored/u,
                         );
                     },
@@ -690,7 +674,6 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
                             async () =>
@@ -700,31 +683,22 @@ describe
                             },
                             /No files matching 'doesnotexist1\/\*\.js' were found/u,
                         );
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['doesnotexist1/*.js', 'subdir1/*.js']);
-                            },
+                            { await eslint.lintParallel(['doesnotexist1/*.js', 'subdir1/*.js']); },
                             /No files matching 'doesnotexist1\/\*\.js' were found/u,
                         );
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['subdir1/*.js', 'doesnotexist1/*.js']);
-                            },
+                            { await eslint.lintParallel(['subdir1/*.js', 'doesnotexist1/*.js']); },
                             /All files matched by 'subdir1\/\*\.js' are ignored/u,
                         );
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']);
-                            },
+                            { await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']); },
                             /All files matched by 'subdir1\/\*\.js' are ignored/u,
                         );
                     },
@@ -746,7 +720,6 @@ describe
                                 configLookup:               true,
                             },
                         );
-
                         const results = await eslint.lintParallel(['subdir2/*.js']);
 
                         assert.strictEqual(results.length, 0);
@@ -768,7 +741,6 @@ describe
                                 configLookup:               true,
                             },
                         );
-
                         const results = await eslint.lintParallel(['doesexist/*.js']);
 
                         assert.strictEqual(results.length, 0);
@@ -981,13 +953,9 @@ describe
                         globInputPaths:     false,
                     },
                 );
-
                 await assert.rejects
                 (
-                    async () =>
-                    {
-                        await eslint.lintParallel(['fixtures/files/*']);
-                    },
+                    async () => { await eslint.lintParallel(['fixtures/files/*']); },
                     /No files matching 'fixtures\/files\/\*' were found \(glob was disabled\)\./u,
                 );
             },
@@ -1148,13 +1116,9 @@ describe
                     {
                         eslint =
                         await FlatESLint.fromCLIOptions({ cwd: getFixturePath('cli-engine') });
-
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['node_modules']);
-                            },
+                            async () => { await eslint.lintParallel(['node_modules']); },
                             /All files matched by 'node_modules' are ignored\./u,
                         );
                     },
@@ -1175,13 +1139,9 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['node_modules']);
-                            },
+                            async () => { await eslint.lintParallel(['node_modules']); },
                             /All files matched by 'node_modules' are ignored\./u,
                         );
                     },
@@ -1195,13 +1155,10 @@ describe
                         eslint =
                         await FlatESLint.fromCLIOptions
                         ({ config: getFixturePath('eslint.config_with_ignores.js') });
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['test/fixtures/cli-engine/']);
-                            },
+                            { await eslint.lintParallel(['test/fixtures/cli-engine/']); },
                             /All files matched by 'test\/fixtures\/cli-engine\/' are ignored\./u,
                         );
                     },
@@ -1216,15 +1173,12 @@ describe
                         eslint =
                         await FlatESLint.fromCLIOptions
                         ({ config: getFixturePath('eslint.config_with_ignores.js') });
-
                         const expectedRegExp =
                         /All files matched by '\.\/test\/fixtures\/cli-engine\/' are ignored\./u;
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['./test/fixtures/cli-engine/']);
-                            },
+                            { await eslint.lintParallel(['./test/fixtures/cli-engine/']); },
                             expectedRegExp,
                         );
                     },
@@ -1271,15 +1225,12 @@ describe
                                 overrideConfig: { rules: { quotes: [2, 'double'] } },
                             },
                         );
-
                         const expectedRegExp =
                         /All files matched by '\.\/test\/fixtures\/cli-engine\/' are ignored\./u;
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['./test/fixtures/cli-engine/']);
-                            },
+                            { await eslint.lintParallel(['./test/fixtures/cli-engine/']); },
                             expectedRegExp,
                         );
                     },
@@ -1293,13 +1244,10 @@ describe
                         eslint =
                         await FlatESLint.fromCLIOptions
                         ({ ignorePattern: ['test/fixtures/single-quoted.js'] });
-
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['test/fixtures/*-quoted.js']);
-                            },
+                            { await eslint.lintParallel(['test/fixtures/*-quoted.js']); },
                             /All files matched by 'test\/fixtures\/\*-quoted\.js' are ignored\./u,
                         );
                     },
@@ -1463,27 +1411,17 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['subdir/**']);
-                            },
+                            async () => { await eslint.lintParallel(['subdir/**']); },
                             /All files matched by 'subdir\/\*\*' are ignored\./u,
                         );
-
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['subdir/subsubdir/**']);
-                            },
+                            async () => { await eslint.lintParallel(['subdir/subsubdir/**']); },
                             /All files matched by 'subdir\/subsubdir\/\*\*' are ignored\./u,
                         );
-
                         const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
-
                         assert.strictEqual(results.length, 1);
                         assert.strictEqual
                         (
@@ -1513,18 +1451,12 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['subdir/**/*.js']);
-                            },
+                            async () => { await eslint.lintParallel(['subdir/**/*.js']); },
                             /All files matched by 'subdir\/\*\*\/\*\.js' are ignored\./u,
                         );
-
                         const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
-
                         assert.strictEqual(results.length, 1);
                         assert.strictEqual
                         (
@@ -1546,13 +1478,9 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['subsubdir/**/*.js']);
-                            },
+                            async () => { await eslint.lintParallel(['subsubdir/**/*.js']); },
                             /All files matched by 'subsubdir\/\*\*\/\*\.js' are ignored\./u,
                         );
                     },
@@ -1572,7 +1500,6 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         const results = await eslint.lintParallel(['*.js']);
 
                         assert.strictEqual(results.length, 1);
@@ -1865,7 +1792,6 @@ describe
                 );
                 const failFilePath = getFixturePath('missing-semicolon.js');
                 const passFilePath = getFixturePath('passing.js');
-
                 let results = await eslint.lintParallel([failFilePath]);
 
                 assert.strictEqual(results.length, 1);
@@ -1876,6 +1802,7 @@ describe
                 assert.strictEqual(results[0].messages[0].severity, 2);
 
                 results = await eslint.lintParallel([passFilePath]);
+
                 assert.strictEqual(results.length, 1);
                 assert.strictEqual(results[0].filePath, passFilePath);
                 assert.strictEqual(results[0].messages.length, 0);
@@ -2111,8 +2038,8 @@ describe
                             },
                         );
                         const results = await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
-
                         results.forEach(convertCRLF);
+
                         assert.deepStrictEqual
                         (
                             results,
@@ -2276,13 +2203,11 @@ describe
                                 },
                             },
                         };
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         ({ ...baseOptions, cache: true, fix: false });
                         // Do initial lint run and populate the cache file
                         await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         ({ ...baseOptions, cache: true, fix: true });
@@ -2408,16 +2333,14 @@ describe
 
                 beforeEach
                 (
-                    () =>
-                    {
-                        cacheFilePath = null;
-                    },
+                    () => { cacheFilePath = null; },
                 );
 
                 afterEach
                 (
                     () =>
                     {
+                        sinon.restore();
                         if (cacheFilePath)
                             doDelete(cacheFilePath);
                     },
@@ -2454,20 +2377,10 @@ describe
                         }
 
                         beforeEach
-                        (
-                            () =>
-                            {
-                                deleteCacheDir();
-                            },
-                        );
+                        (() => { deleteCacheDir(); });
 
                         afterEach
-                        (
-                            () =>
-                            {
-                                deleteCacheDir();
-                            },
-                        );
+                        (() => { deleteCacheDir(); });
 
                         it
                         (
@@ -2502,7 +2415,6 @@ describe
                                     },
                                 );
                                 const file = getFixturePath('cache/src', 'test-file.js');
-
                                 await eslint.lintParallel([file]);
 
                                 assert
@@ -2531,7 +2443,6 @@ describe
                                 );
 
                                 mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
-
                                 eslint =
                                 await FlatESLint.fromCLIOptions
                                 (
@@ -2552,7 +2463,6 @@ describe
                                     },
                                 );
                                 const file = getFixturePath('cache/src', 'test-file.js');
-
                                 await eslint.lintParallel([file]);
 
                                 assert
@@ -2581,7 +2491,6 @@ describe
                                 );
 
                                 mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
-
                                 eslint =
                                 await FlatESLint.fromCLIOptions
                                 (
@@ -2602,7 +2511,6 @@ describe
                                     },
                                 );
                                 const file = getFixturePath('cache/src', 'test-file.js');
-
                                 await eslint.lintParallel([file]);
 
                                 assert
@@ -2625,7 +2533,6 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath('cli-engine');
-
                         cacheFilePath = join(cwd, '.eslintcache');
                         doDelete(cacheFilePath);
                         assert
@@ -2645,7 +2552,6 @@ describe
                             },
                         );
                         const file = getFixturePath('cli-engine', 'console.js');
-
                         await eslint.lintParallel([file]);
 
                         assert
@@ -2662,7 +2568,6 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath('cache/src');
-
                         cacheFilePath = join(cwd, '.eslintcache');
                         doDelete(cacheFilePath);
                         assert
@@ -2691,7 +2596,6 @@ describe
                         );
                         eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
                         const file = join(cwd, 'test-file.js');
-
                         const results = await eslint.lintParallel([file]);
 
                         for (const { errorCount, warningCount, readFileCalled } of results)
@@ -2733,7 +2637,6 @@ describe
                             },
                         );
                         eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
-
                         const [newResult] = await eslint.lintParallel([file]);
 
                         assert
@@ -2765,7 +2668,6 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath('cache/src');
-
                         cacheFilePath = join(cwd, '.eslintcache');
                         doDelete(cacheFilePath);
                         assert
@@ -2794,7 +2696,6 @@ describe
                         );
                         eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
                         const file = getFixturePath('cache/src', 'test-file.js');
-
                         const results = await eslint.lintParallel([file]);
 
                         assert
@@ -2827,11 +2728,10 @@ describe
                             },
                         );
                         eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
-
                         const cachedResults = await eslint.lintParallel([file]);
-
                         // assert the file was not processed because the cache was used
                         results[0].readFileCalled = false;
+
                         assert.deepStrictEqual
                         (results, cachedResults, 'the result should have been the same');
                     },
@@ -2866,10 +2766,8 @@ describe
                             },
                             cwd:            join(fixtureDir, '..'),
                         };
-
                         eslint = await FlatESLint.fromCLIOptions(eslintOptions);
                         const file = getFixturePath('cache/src', 'test-file.js');
-
                         await eslint.lintParallel([file]);
 
                         assert
@@ -2880,7 +2778,6 @@ describe
 
                         eslintOptions.cache = false;
                         eslint = await FlatESLint.fromCLIOptions(eslintOptions);
-
                         await eslint.lintParallel([file]);
 
                         assert
@@ -2888,6 +2785,50 @@ describe
                             !shell.test('-f', cacheFilePath),
                             'the cache for eslint should have been deleted since last run did ' +
                             'not use the cache',
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should not throw an error if the cache file to be deleted does not exist on ' +
+                    'a read-only file system',
+                    async () =>
+                    {
+                        cacheFilePath = getFixturePath('.eslintcache');
+                        doDelete(cacheFilePath);
+                        assert
+                        (
+                            !shell.test('-f', cacheFilePath),
+                            'the cache file already exists and wasn\'t successfully deleted',
+                        );
+
+                        // Simulate a read-only file system.
+                        sinon.stub(fsPromises, 'unlink').rejects
+                        (Object.assign(Error('read-only file system'), { code: 'EROFS' }));
+                        const eslintOptions =
+                        {
+                            // specifying cache false the cache will be deleted
+                            cache:              false,
+                            cacheLocation:      cacheFilePath,
+                            overrideConfig:
+                            {
+                                rules:
+                                {
+                                    'no-console':     0,
+                                    'no-unused-vars': 2,
+                                },
+                            },
+                            cwd:                join(fixtureDir, '..'),
+                        };
+                        eslint = await FlatESLint.fromCLIOptions(eslintOptions);
+                        const file = getFixturePath('cache/src', 'test-file.js');
+                        await eslint.lintParallel([file]);
+
+                        assert
+                        (
+                            fsPromises.unlink.calledWithExactly(cacheFilePath),
+                            'Expected attempt to delete the cache was not made.',
                         );
                     },
                 );
@@ -2941,7 +2882,6 @@ describe
                             0,
                             'the good file should have passed linting without errors or warnings',
                         );
-
                         assert
                         (
                             shell.test('-f', cacheFilePath),
@@ -2963,6 +2903,7 @@ describe
                             'object',
                             'the entry for the bad file should have been in the cache',
                         );
+
                         const cachedResult = await eslint.lintParallel([badFile, goodFile]);
 
                         assert.deepStrictEqual
@@ -3004,7 +2945,6 @@ describe
                         const badFile = getFixturePath('cache/src', 'fail-file.js');
                         const goodFile = getFixturePath('cache/src', 'test-file.js');
                         const toBeDeletedFile = getFixturePath('cache/src', 'file-to-delete.js');
-
                         await eslint.lintParallel([badFile, goodFile, toBeDeletedFile]);
                         const fileCache = fCache.createFromFile(cacheFilePath);
                         let { cache } = fileCache;
@@ -3024,7 +2964,6 @@ describe
                          * even when they were not part of the array of files to be analyzed
                          */
                         await eslint.lintParallel([badFile, goodFile]);
-
                         cache = JSON.parse(readFileSync(cacheFilePath));
 
                         assert.strictEqual
@@ -3034,7 +2973,6 @@ describe
                             'the entry for the file to be deleted should not have been in the ' +
                             'cache',
                         );
-
                         // make sure that the previos assertion checks the right place
                         assert.notStrictEqual
                         (
@@ -3086,9 +3024,7 @@ describe
                         const badFile = getFixturePath('cache/src', 'fail-file.js');
                         const goodFile = getFixturePath('cache/src', 'test-file.js');
                         const testFile2 = getFixturePath('cache/src', 'test-file2.js');
-
                         await eslint.lintParallel([badFile, goodFile, testFile2]);
-
                         let fileCache = fCache.createFromFile(cacheFilePath);
                         let { cache } = fileCache;
 
@@ -3105,7 +3041,6 @@ describe
                          * entries. 2.0.0 version will keep them unless they don't exist
                          */
                         await eslint.lintParallel([badFile, goodFile]);
-
                         fileCache = fCache.createFromFile(cacheFilePath);
                         ({ cache } = fileCache);
 
@@ -3132,7 +3067,6 @@ describe
                         );
 
                         writeFileSync(cacheFilePath, '');
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -3180,7 +3114,6 @@ describe
 
                         // intenationally invalid to additionally make sure it isn't used
                         writeFileSync(cacheFilePath, '[]');
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -3290,7 +3223,6 @@ describe
                         );
 
                         const deprecatedRuleId = 'space-in-parens';
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -3308,7 +3240,6 @@ describe
                                 },
                             },
                         );
-
                         const filePath = getFixturePath('cache/src', 'test-file.js');
 
                         /*
@@ -3333,7 +3264,6 @@ describe
                                 'the deprecated rule should have been in ' +
                                 'result.usedDeprecatedRules',
                             );
-
                             assert
                             (
                                 shell.test('-f', cacheFilePath),
@@ -3389,7 +3319,6 @@ describe
                                 overrideConfig: { rules: { 'no-unused-vars': 2 } },
                             },
                         );
-
                         const filePath = getFixturePath('cache/src', 'fail-file.js');
 
                         /*
@@ -3432,7 +3361,6 @@ describe
                                 'lint result for the file should have been in its cache entry in ' +
                                 'the cache file',
                             );
-
                             // if the lint result contains `source`, it should be stored as `null`
                             // in the cache file
                             assert.strictEqual
@@ -3486,7 +3414,6 @@ describe
                                 );
                                 const badFile = getFixturePath('cache/src', 'fail-file.js');
                                 const goodFile = getFixturePath('cache/src', 'test-file.js');
-
                                 await eslint.lintParallel([badFile, goodFile]);
                                 let fileCache = fCache.createFromFile(cacheFilePath);
                                 const entries = fileCache.normalizeEntries([badFile, goodFile]);
@@ -3507,6 +3434,7 @@ describe
                                 // this should result in a changed entry
                                 shell.touch(goodFile);
                                 fileCache = fCache.createFromFile(cacheFilePath);
+
                                 assert
                                 (
                                     fileCache.getFileDescriptor(badFile).changed === false,
@@ -3556,7 +3484,6 @@ describe
                                 );
                                 const badFile = getFixturePath('cache/src', 'fail-file.js');
                                 const goodFile = getFixturePath('cache/src', 'test-file.js');
-
                                 await eslint.lintParallel([badFile, goodFile]);
                                 let fileCache = fCache.createFromFile(cacheFilePath, true);
                                 let entries = fileCache.normalizeEntries([badFile, goodFile]);
@@ -3578,6 +3505,7 @@ describe
                                 shell.touch(goodFile);
                                 fileCache = fCache.createFromFile(cacheFilePath, true);
                                 entries = fileCache.normalizeEntries([badFile, goodFile]);
+
                                 entries.forEach
                                 (
                                     entry =>
@@ -3632,9 +3560,7 @@ describe
                                 const goodFile = getFixturePath('cache/src', 'test-file.js');
                                 const goodFileCopy =
                                 join(`${dirname(goodFile)}`, 'test-file-copy.js');
-
                                 shell.cp(goodFile, goodFileCopy);
-
                                 await eslint.lintParallel([badFile, goodFileCopy]);
                                 let fileCache = fCache.createFromFile(cacheFilePath, true);
                                 const entries = fileCache.normalizeEntries([badFile, goodFileCopy]);
@@ -3655,6 +3581,7 @@ describe
                                 // this should result in a changed entry
                                 shell.sed('-i', 'abc', 'xzy', goodFileCopy);
                                 fileCache = fCache.createFromFile(cacheFilePath, true);
+
                                 assert
                                 (
                                     fileCache.getFileDescriptor(badFile).changed === false,
@@ -3781,10 +3708,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['non-exist.js']);
-                            },
+                            async () => { await eslint.lintParallel(['non-exist.js']); },
                             /No files matching 'non-exist\.js' were found\./u,
                         );
                     },
@@ -3798,10 +3722,7 @@ describe
                         ensureDirectoryExists(getFixturePath('cli-engine/empty'));
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['empty']);
-                            },
+                            async () => { await eslint.lintParallel(['empty']); },
                             /No files matching 'empty' were found\./u,
                         );
                     },
@@ -3814,10 +3735,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['non-exist/**/*.js']);
-                            },
+                            async () => { await eslint.lintParallel(['non-exist/**/*.js']); },
                             /No files matching 'non-exist\/\*\*\/\*\.js' were found\./u,
                         );
                     },
@@ -3830,10 +3748,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['aaa.js', 'bbb.js']);
-                            },
+                            async () => { await eslint.lintParallel(['aaa.js', 'bbb.js']); },
                             /No files matching 'aaa\.js' were found\./u,
                         );
                     },
@@ -3847,9 +3762,7 @@ describe
                         await assert.rejects
                         (
                             async () =>
-                            {
-                                await eslint.lintParallel(['console.js', 'non-exist.js']);
-                            },
+                            { await eslint.lintParallel(['console.js', 'non-exist.js']); },
                             /No files matching 'non-exist\.js' were found\./u,
                         );
                     },
@@ -3863,10 +3776,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['*.js', 'non-exist/*.js']);
-                            },
+                            async () => { await eslint.lintParallel(['*.js', 'non-exist/*.js']); },
                             /No files matching 'non-exist\/\*\.js' were found\./u,
                         );
                     },
@@ -3978,7 +3888,6 @@ describe
                             },
                         );
                         await teardown.prepare();
-
                         eslint = await FlatESLint.fromCLIOptions
                         (
                             {
@@ -4039,7 +3948,6 @@ describe
                             },
                         );
                         await teardown.prepare();
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4106,7 +4014,6 @@ describe
                             },
                         );
                         await teardown.prepare();
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4191,7 +4098,6 @@ describe
                             },
                         );
                         await teardown.prepare();
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4266,7 +4172,6 @@ describe
                             },
                         );
                         await teardown.prepare();
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4322,7 +4227,6 @@ describe
                             },
                         );
                         await teardown.prepare();
-
                         eslint = await FlatESLint.fromCLIOptions
                         (
                             {
@@ -4330,13 +4234,9 @@ describe
                                 configLookup:   true,
                             },
                         );
-
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel(['test.md']);
-                            },
+                            async () => { await eslint.lintParallel(['test.md']); },
                             /Key "processor": Could not find "unknown" in plugin "markdown"/u,
                         );
                     },
@@ -4385,7 +4285,6 @@ describe
                         );
                         await teardown.prepare();
                         ({ cleanup } = teardown);
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4422,7 +4321,6 @@ describe
                         );
                         await teardown.prepare();
                         ({ cleanup } = teardown);
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4480,7 +4378,6 @@ describe
                         );
                         await teardown.prepare();
                         ({ cleanup } = teardown);
-
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4512,12 +4409,14 @@ describe
                 const root = getFixturePath('cli-engine/reportUnusedDisableDirectives');
 
                 let cleanup;
+                let i = 0;
 
                 beforeEach
                 (
                     () =>
                     {
                         cleanup = () => { };
+                        i++;
                     },
                 );
 
@@ -4525,27 +4424,116 @@ describe
 
                 it
                 (
-                    'should warn unused \'eslint-disable\' comments if ' +
-                    '\'reportUnusedDisableDirectives\' was given.',
+                    'should error unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = error\'.',
                     async () =>
                     {
                         const teardown =
                         createCustomTeardown
                         (
                             {
-                                cwd: root,
+                                cwd: `${root}${i}`,
                                 files:
                                 {
                                     'test.js': '/* eslint-disable eqeqeq */',
                                     'eslint.config.js':
                                     'module.exports = { linterOptions: { ' +
-                                    'reportUnusedDisableDirectives: true } }',
+                                    'reportUnusedDisableDirectives: \'error\' } }',
                                 },
                             },
                         );
                         await teardown.prepare();
                         ({ cleanup } = teardown);
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            teardown.getPath(),
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['test.js']);
+                        const [{ messages }] = results;
 
+                        assert.strictEqual(messages.length, 1);
+                        assert.strictEqual(messages[0].severity, 2);
+                        assert.strictEqual
+                        (
+                            messages[0].message,
+                            'Unused eslint-disable directive (no problems were reported from ' +
+                            '\'eqeqeq\').',
+                        );
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should error unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = 2\'.',
+                    async () =>
+                    {
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd: `${root}${i}`,
+                                files:
+                                {
+                                    'test.js': '/* eslint-disable eqeqeq */',
+                                    'eslint.config.js':
+                                    'module.exports = { linterOptions: { ' +
+                                    'reportUnusedDisableDirectives: 2 } }',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        ({ cleanup } = teardown);
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            teardown.getPath(),
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['test.js']);
+                        const [{ messages }] = results;
+
+                        assert.strictEqual(messages.length, 1);
+                        assert.strictEqual(messages[0].severity, 2);
+                        assert.strictEqual
+                        (
+                            messages[0].message,
+                            'Unused eslint-disable directive (no problems were reported from ' +
+                            '\'eqeqeq\').',
+                        );
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should warn unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = warn\'.',
+                    async () =>
+                    {
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd: `${root}${i}`,
+                                files:
+                                {
+                                    'test.js': '/* eslint-disable eqeqeq */',
+                                    'eslint.config.js':
+                                    'module.exports = { linterOptions: { ' +
+                                    'reportUnusedDisableDirectives: \'warn\' } }',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        ({ cleanup } = teardown);
                         eslint =
                         await FlatESLint.fromCLIOptions
                         (
@@ -4569,6 +4557,207 @@ describe
                     },
                 );
 
+                it
+                (
+                    'should warn unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = 1\'.',
+                    async () =>
+                    {
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd: `${root}${i}`,
+                                files:
+                                {
+                                    'test.js': '/* eslint-disable eqeqeq */',
+                                    'eslint.config.js':
+                                    'module.exports = { linterOptions: { ' +
+                                    'reportUnusedDisableDirectives: 1 } }',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        ({ cleanup } = teardown);
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            teardown.getPath(),
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['test.js']);
+                        const [{ messages }] = results;
+
+                        assert.strictEqual(messages.length, 1);
+                        assert.strictEqual(messages[0].severity, 1);
+                        assert.strictEqual
+                        (
+                            messages[0].message,
+                            'Unused eslint-disable directive (no problems were reported from ' +
+                            '\'eqeqeq\').',
+                        );
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should warn unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = true\'.',
+                    async () =>
+                    {
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd: `${root}${i}`,
+                                files:
+                                {
+                                    'test.js': '/* eslint-disable eqeqeq */',
+                                    'eslint.config.js':
+                                    'module.exports = { linterOptions: { ' +
+                                    'reportUnusedDisableDirectives: true } }',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        ({ cleanup } = teardown);
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            teardown.getPath(),
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['test.js']);
+                        const [{ messages }] = results;
+
+                        assert.strictEqual(messages.length, 1);
+                        assert.strictEqual(messages[0].severity, 1);
+                        assert.strictEqual
+                        (
+                            messages[0].message,
+                            'Unused eslint-disable directive (no problems were reported from ' +
+                            '\'eqeqeq\').',
+                        );
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should not warn unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = false\'.',
+                    async () =>
+                    {
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd: `${root}${i}`,
+                                files:
+                                {
+                                    'test.js': '/* eslint-disable eqeqeq */',
+                                    'eslint.config.js':
+                                    'module.exports = { linterOptions: { ' +
+                                    'reportUnusedDisableDirectives: false } }',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        ({ cleanup } = teardown);
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            teardown.getPath(),
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['test.js']);
+                        const [{ messages }] = results;
+
+                        assert.strictEqual(messages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should not warn unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = off\'.',
+                    async () =>
+                    {
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd: `${root}${i}`,
+                                files:
+                                {
+                                    'test.js': '/* eslint-disable eqeqeq */',
+                                    'eslint.config.js':
+                                    'module.exports = { linterOptions: { ' +
+                                    'reportUnusedDisableDirectives: \'off\' } }',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        ({ cleanup } = teardown);
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            teardown.getPath(),
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['test.js']);
+                        const [{ messages }] = results;
+
+                        assert.strictEqual(messages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should not warn unused \'eslint-disable\' comments if ' +
+                    '\'reportUnusedDisableDirectives = 0\'.',
+                    async () =>
+                    {
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd: `${root}${i}`,
+                                files:
+                                {
+                                    'test.js': '/* eslint-disable eqeqeq */',
+                                    'eslint.config.js':
+                                    'module.exports = { linterOptions: { ' +
+                                    'reportUnusedDisableDirectives: 0 } }',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        ({ cleanup } = teardown);
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            teardown.getPath(),
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['test.js']);
+                        const [{ messages }] = results;
+
+                        assert.strictEqual(messages.length, 0);
+                    },
+                );
+
                 describe
                 (
                     'the runtime option overrides config files.',
@@ -4584,23 +4773,25 @@ describe
                                 createCustomTeardown
                                 (
                                     {
-                                        cwd: root,
+                                        cwd: `${root}${i}`,
                                         files:
                                         {
-                                            'test.js':       '/* eslint-disable eqeqeq */',
-                                            '.eslintrc.yml': 'reportUnusedDisableDirectives: true',
+                                            'test.js': '/* eslint-disable eqeqeq */',
+                                            'eslint.config.js':
+                                            'module.exports = [{ linterOptions: { ' +
+                                            'reportUnusedDisableDirectives: true } }]',
                                         },
                                     },
                                 );
                                 await teardown.prepare();
                                 ({ cleanup } = teardown);
-
                                 eslint =
                                 await FlatESLint.fromCLIOptions
                                 (
                                     {
                                         cwd:                            teardown.getPath(),
-                                        reportUnusedDisableDirectives:  false,
+                                        overrideConfig:
+                                        { linterOptions: { reportUnusedDisableDirectives: 'off' } },
                                         configLookup:                   true,
                                     },
                                 );
@@ -4621,23 +4812,28 @@ describe
                                 createCustomTeardown
                                 (
                                     {
-                                        cwd: root,
+                                        cwd: `${root}${i}`,
                                         files:
                                         {
-                                            'test.js':       '/* eslint-disable eqeqeq */',
-                                            '.eslintrc.yml': 'reportUnusedDisableDirectives: true',
+                                            'test.js': '/* eslint-disable eqeqeq */',
+                                            'eslint.config.js':
+                                            'module.exports = [{ linterOptions: { ' +
+                                            'reportUnusedDisableDirectives: true } }]',
                                         },
                                     },
                                 );
                                 await teardown.prepare();
                                 ({ cleanup } = teardown);
-
                                 eslint =
                                 await FlatESLint.fromCLIOptions
                                 (
                                     {
                                         cwd:                            teardown.getPath(),
-                                        reportUnusedDisableDirectives:  'error',
+                                        overrideConfig:
+                                        {
+                                            linterOptions:
+                                            { reportUnusedDisableDirectives: 'error' },
+                                        },
                                         configLookup:                   true,
                                     },
                                 );
