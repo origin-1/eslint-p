@@ -2,6 +2,9 @@
 !.git*
 !.npmrc
 !/test/fixtures/**
+/test/fixtures/**/.*
+!/test/fixtures/**/.*/
+!/test/fixtures/**/.*.*
 /coverage/
 /grab/
 /node_modules/

@@ -33,16 +33,6 @@ const fixtureDir = join(realpathSync(tmpdir()), 'eslint/fixtures');
 const originalDir = process.cwd();
 
 /**
- * hash the given string
- * @param {string} str the string to hash
- * @returns {string} the hash
- */
-function hash(str)
-{
-    return murmur(str).result().toString(36);
-}
-
-/**
  * Creates a directory if it doesn't already exist.
  * @param {string} dirPath The path to the directory that should exist.
  * @returns {void}
@@ -57,18 +47,6 @@ function ensureDirectoryExists(dirPath)
     {
         mkdirSync(dirPath);
     }
-}
-
-/**
- * Returns the path inside of the fixture directory.
- * @param {...string} args file path segments.
- * @returns {string} The path inside the fixture directory.
- * @private
- */
-function getFixturePath(...args)
-{
-    const filepath = join(fixtureDir, ...args);
-    return filepath;
 }
 
 /**
@@ -96,6 +74,47 @@ async function eslintWithPlugins(options)
     return engine;
 }
 
+/**
+ * Returns the path inside of the fixture directory.
+ * @param {...string} args file path segments.
+ * @returns {string} The path inside the fixture directory.
+ * @private
+ */
+function getFixturePath(...args)
+{
+    const filepath = join(fixtureDir, ...args);
+    return filepath;
+}
+
+/**
+ * hash the given string
+ * @param {string} str the string to hash
+ * @returns {string} the hash
+ */
+function hash(str)
+{
+    return murmur(str).result().toString(36);
+}
+
+// copy into clean area so as not to get "infected" by this project's .eslintrc files
+function setUpFixtures()
+{
+    /*
+     * GitHub Actions Windows and macOS runners occasionally exhibit
+     * extremely slow filesystem operations, during which copying fixtures
+     * exceeds the default test timeout, so raise it just for this hook.
+     * Mocha uses `this` to set timeouts on an individual hook level.
+     */
+    this.timeout(60 * 1000);
+    shell.mkdir('-p', fixtureDir);
+    shell.cp('-r', './test/fixtures/.', fixtureDir);
+}
+
+function tearDownFixtures()
+{
+    shell.rm('-r', fixtureDir);
+}
+
 describe
 (
     'lintParallel()',
@@ -103,25 +122,9 @@ describe
     {
         let eslint;
 
-        // copy into clean area so as not to get "infected" by this project's .eslintrc files
-        before
-        (
-            function ()
-            {
-                /*
-                 * GitHub Actions Windows and macOS runners occasionally exhibit
-                 * extremely slow filesystem operations, during which copying fixtures
-                 * exceeds the default test timeout, so raise it just for this hook.
-                 * Mocha uses `this` to set timeouts on an individual hook level.
-                 */
-                this.timeout(60 * 1000);
-                shell.mkdir('-p', fixtureDir);
-                shell.cp('-r', './test/fixtures/.', fixtureDir);
-            },
-        );
+        before(setUpFixtures);
 
-        after
-        (() => { shell.rm('-r', fixtureDir); });
+        after(tearDownFixtures);
 
         it
         (
@@ -2407,8 +2410,8 @@ describe
                                         {
                                             rules:
                                             {
-                                                'no-console':     0,
-                                                'no-unused-vars': 2,
+                                                'no-console':       0,
+                                                'no-unused-vars':   2,
                                             },
                                         },
                                         ignore:         false,
@@ -2455,8 +2458,8 @@ describe
                                         {
                                             rules:
                                             {
-                                                'no-console':     0,
-                                                'no-unused-vars': 2,
+                                                'no-console':       0,
+                                                'no-unused-vars':   2,
                                             },
                                         },
                                         ignore:         false,
@@ -2503,8 +2506,8 @@ describe
                                         {
                                             rules:
                                             {
-                                                'no-console':     0,
-                                                'no-unused-vars': 2,
+                                                'no-console':       0,
+                                                'no-unused-vars':   2,
                                             },
                                         },
                                         ignore:         false,
@@ -2587,8 +2590,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                                 ignore: false,
@@ -2629,8 +2632,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     2,
-                                        'no-unused-vars': 2,
+                                        'no-console':       2,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                                 ignore: false,
@@ -2687,8 +2690,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                                 ignore: false,
@@ -2720,8 +2723,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                                 ignore: false,
@@ -2751,7 +2754,7 @@ describe
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
-                        const eslintOptions =
+                        const cliOptions =
                         {
                             // specifying cache true the cache will be created
                             cache:          true,
@@ -2760,13 +2763,13 @@ describe
                             {
                                 rules:
                                 {
-                                    'no-console':     0,
-                                    'no-unused-vars': 2,
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                             },
                             cwd:            join(fixtureDir, '..'),
                         };
-                        eslint = await FlatESLint.fromCLIOptions(eslintOptions);
+                        eslint = await FlatESLint.fromCLIOptions(cliOptions);
                         const file = getFixturePath('cache/src', 'test-file.js');
                         await eslint.lintParallel([file]);
 
@@ -2776,8 +2779,8 @@ describe
                             'the cache for eslint should have been created',
                         );
 
-                        eslintOptions.cache = false;
-                        eslint = await FlatESLint.fromCLIOptions(eslintOptions);
+                        cliOptions.cache = false;
+                        eslint = await FlatESLint.fromCLIOptions(cliOptions);
                         await eslint.lintParallel([file]);
 
                         assert
@@ -2806,22 +2809,22 @@ describe
                         // Simulate a read-only file system.
                         sinon.stub(fsPromises, 'unlink').rejects
                         (Object.assign(Error('read-only file system'), { code: 'EROFS' }));
-                        const eslintOptions =
+                        const cliOptions =
                         {
                             // specifying cache false the cache will be deleted
-                            cache:              false,
-                            cacheLocation:      cacheFilePath,
+                            cache:          false,
+                            cacheLocation:  cacheFilePath,
                             overrideConfig:
                             {
                                 rules:
                                 {
-                                    'no-console':     0,
-                                    'no-unused-vars': 2,
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                             },
-                            cwd:                join(fixtureDir, '..'),
+                            cwd:            join(fixtureDir, '..'),
                         };
-                        eslint = await FlatESLint.fromCLIOptions(eslintOptions);
+                        eslint = await FlatESLint.fromCLIOptions(cliOptions);
                         const file = getFixturePath('cache/src', 'test-file.js');
                         await eslint.lintParallel([file]);
 
@@ -2859,8 +2862,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                             },
@@ -2936,8 +2939,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                             },
@@ -3015,8 +3018,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                             },
@@ -3078,8 +3081,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                             },
@@ -3124,8 +3127,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                             },
@@ -3170,8 +3173,8 @@ describe
                                 {
                                     rules:
                                     {
-                                        'no-console':     0,
-                                        'no-unused-vars': 2,
+                                        'no-console':       0,
+                                        'no-unused-vars':   2,
                                     },
                                 },
                                 cwd:            join(fixtureDir, '..'),
@@ -3406,8 +3409,8 @@ describe
                                         {
                                             rules:
                                             {
-                                                'no-console':     0,
-                                                'no-unused-vars': 2,
+                                                'no-console':       0,
+                                                'no-unused-vars':   2,
                                             },
                                         },
                                     },
@@ -3476,8 +3479,8 @@ describe
                                         {
                                             rules:
                                             {
-                                                'no-console':     0,
-                                                'no-unused-vars': 2,
+                                                'no-console':       0,
+                                                'no-unused-vars':   2,
                                             },
                                         },
                                     },
@@ -3549,8 +3552,8 @@ describe
                                         {
                                             rules:
                                             {
-                                                'no-console':     0,
-                                                'no-unused-vars': 2,
+                                                'no-console':       0,
+                                                'no-unused-vars':   2,
                                             },
                                         },
 
@@ -3621,8 +3624,8 @@ describe
                                         processor: 'test-processor-1/txt',
                                         rules:
                                         {
-                                            'no-console':     2,
-                                            'no-unused-vars': 2,
+                                            'no-console':       2,
+                                            'no-unused-vars':   2,
                                         },
                                     },
                                     {
@@ -3661,8 +3664,8 @@ describe
                                         processor: 'test-processor-2/txt',
                                         rules:
                                         {
-                                            'no-console':     2,
-                                            'no-unused-vars': 2,
+                                            'no-console':       2,
+                                            'no-unused-vars':   2,
                                         },
                                     },
                                     {
@@ -4789,10 +4792,10 @@ describe
                                 await FlatESLint.fromCLIOptions
                                 (
                                     {
-                                        cwd:                            teardown.getPath(),
+                                        cwd:            teardown.getPath(),
                                         overrideConfig:
                                         { linterOptions: { reportUnusedDisableDirectives: 'off' } },
-                                        configLookup:                   true,
+                                        configLookup:   true,
                                     },
                                 );
                                 const results = await eslint.lintParallel(['test.js']);
@@ -4828,13 +4831,13 @@ describe
                                 await FlatESLint.fromCLIOptions
                                 (
                                     {
-                                        cwd:                            teardown.getPath(),
+                                        cwd:            teardown.getPath(),
                                         overrideConfig:
                                         {
                                             linterOptions:
                                             { reportUnusedDisableDirectives: 'error' },
                                         },
-                                        configLookup:                   true,
+                                        configLookup:   true,
                                     },
                                 );
                                 const results = await eslint.lintParallel(['test.js']);
@@ -4872,6 +4875,203 @@ describe
                     () => eslint.lintParallel([null]),
                     /'patterns' must be a non-empty string or an array of non-empty strings/u,
                 );
+            },
+        );
+    },
+);
+
+describe
+(
+    'Fix Types',
+    () =>
+    {
+        let eslint;
+
+        before(setUpFixtures);
+
+        after(tearDownFixtures);
+
+        it
+        (
+            'should throw an error when an invalid fix type is specified',
+            async () =>
+            {
+                await assert.rejects
+                (
+                    async () =>
+                    {
+                        eslint =
+                        await FlatESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:        join(fixtureDir, '..'),
+                                fix:        true,
+                                fixType:    ['layou'],
+                            },
+                        );
+                    },
+                    {
+                        message:
+                        'Invalid Options:\n' +
+                        '- \'fixTypes\' must be an array of any of "directive", "problem", ' +
+                        '"suggestion", and "layout".',
+                    },
+                );
+            },
+        );
+
+        it
+        (
+            'should not fix any rules when fixTypes is used without fix',
+            async () =>
+            {
+                eslint =
+                await FlatESLint.fromCLIOptions
+                (
+                    {
+                        cwd:        join(fixtureDir, '..'),
+                        fix:        false,
+                        fixType:    ['layout'],
+                    },
+                );
+                const inputPath = getFixturePath('fix-types/fix-only-semi.js');
+                const results = await eslint.lintParallel([inputPath]);
+
+                assert.strictEqual(results[0].output, void 0);
+            },
+        );
+
+        it
+        (
+            'should not fix non-style rules when fixTypes has only \'layout\'',
+            async () =>
+            {
+                eslint =
+                await FlatESLint.fromCLIOptions
+                (
+                    {
+                        cwd:        join(fixtureDir, '..'),
+                        fix:        true,
+                        fixType:    ['layout'],
+                    },
+                );
+                const inputPath = getFixturePath('fix-types/fix-only-semi.js');
+                const outputPath = getFixturePath('fix-types/fix-only-semi.expected.js');
+                const results = await eslint.lintParallel([inputPath]);
+                const expectedOutput = readFileSync(outputPath, 'utf8');
+
+                assert.strictEqual(results[0].output, expectedOutput);
+            },
+        );
+
+        it
+        (
+            'should not fix style or problem rules when fixTypes has only \'suggestion\'',
+            async () =>
+            {
+                eslint =
+                await FlatESLint.fromCLIOptions
+                (
+                    {
+                        cwd:        join(fixtureDir, '..'),
+                        fix:        true,
+                        fixType:    ['suggestion'],
+                    },
+                );
+                const inputPath = getFixturePath('fix-types/fix-only-prefer-arrow-callback.js');
+                const outputPath =
+                getFixturePath('fix-types/fix-only-prefer-arrow-callback.expected.js');
+                const results = await eslint.lintParallel([inputPath]);
+                const expectedOutput = readFileSync(outputPath, 'utf8');
+
+                assert.strictEqual(results[0].output, expectedOutput);
+            },
+        );
+
+        it
+        (
+            'should fix both style and problem rules when fixTypes has \'suggestion\' and ' +
+            '\'layout\'',
+            async () =>
+            {
+                eslint =
+                await FlatESLint.fromCLIOptions
+                (
+                    {
+                        cwd:        join(fixtureDir, '..'),
+                        fix:        true,
+                        fixType:    ['suggestion', 'layout'],
+                    },
+                );
+                const inputPath =
+                getFixturePath('fix-types/fix-both-semi-and-prefer-arrow-callback.js');
+                const outputPath =
+                getFixturePath('fix-types/fix-both-semi-and-prefer-arrow-callback.expected.js');
+                const results = await eslint.lintParallel([inputPath]);
+                const expectedOutput = readFileSync(outputPath, 'utf8');
+
+                assert.strictEqual(results[0].output, expectedOutput);
+            },
+        );
+    },
+);
+
+describe
+(
+    'lintParallel worker therad',
+    () =>
+    {
+        let eslint;
+
+        const root = getFixturePath('bad-config');
+
+        let cleanup;
+
+        beforeEach
+        (
+            () =>
+            {
+                cleanup = () => { };
+            },
+        );
+
+        afterEach(() => cleanup());
+
+        it
+        (
+            'should emit an error',
+            async () =>
+            {
+                const teardown =
+                createCustomTeardown
+                (
+                    {
+                        cwd: root,
+                        files:
+                        {
+                            'test.js': '',
+                            'eslint.config.js':
+                            `
+                            const { isMainThread } = require('node:worker_threads');
+
+                            if (!isMainThread)
+                                throw Error('foobar');
+                            `,
+                        },
+                    },
+                );
+                await teardown.prepare();
+                ({ cleanup } = teardown);
+                eslint =
+                await FlatESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            teardown.getPath(),
+                        configLookup:   true,
+                    },
+                );
+                await assert.rejects
+                (async () => await eslint.lintParallel(['test.js']), { message: 'foobar' });
             },
         );
     },
