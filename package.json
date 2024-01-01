@@ -13,7 +13,7 @@
     "url": "git+https://github.com/origin-1/eslint-p.git"
   },
   "scripts": {
-    "build": "npm install && npm run build-no-install",
+    "build": "npm install -f && npm run build-no-install",
     "build-no-install": "npm run clean && npm run make-grabs && npm run lint && npm run coverage",
     "clean": "node dev/clean.js",
     "coverage": "node dev/coverage.js",
@@ -35,7 +35,6 @@
     "globals": "^13.24.0",
     "imurmurhash": "^0.1.4",
     "mocha": "^10.2.0",
-    "shelljs": "^0.8.5",
     "sinon": "^17.0.1"
   },
   "engines": {

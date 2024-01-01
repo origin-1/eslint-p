@@ -2,10 +2,9 @@
 
 import assert                                           from 'node:assert';
 
-import { mkdirSync, readFileSync, realpathSync, rmSync, statSync, unlinkSync, writeFileSync }
-from 'node:fs';
+import fsPromises, { copyFile, cp, mkdir, readFile, realpath, rm, stat, unlink, utimes, writeFile }
+from 'node:fs/promises';
 
-import fsPromises, { rm }                               from 'node:fs/promises';
 import { platform, tmpdir }                             from 'node:os';
 import { basename, dirname, join, relative, resolve }   from 'node:path';
 import { fileURLToPath }                                from 'node:url';
@@ -14,7 +13,6 @@ import patchESLint                                      from '../lib/patch-eslin
 import { createCustomTeardown, unIndent }               from './_utils/index.js';
 import fCache                                           from 'file-entry-cache';
 import murmur                                           from 'imurmurhash';
-import shell                                            from 'shelljs';
 import sinon                                            from 'sinon';
 
 async function getESLint()
@@ -29,24 +27,13 @@ const ESLint = await getESLint();
 const examplePluginName = 'eslint-plugin-example';
 const examplePluginNameWithNamespace = '@eslint/eslint-plugin-example';
 const examplePreprocessorName = 'eslint-plugin-processor';
-const fixtureDir = join(realpathSync(tmpdir()), 'eslint/fixtures');
+const fixtureDir = join(await realpath(tmpdir()), 'eslint/fixtures');
 const originalDir = process.cwd();
 
-/**
- * Creates a directory if it doesn't already exist.
- * @param {string} dirPath The path to the directory that should exist.
- * @returns {void}
- */
-function ensureDirectoryExists(dirPath)
+async function directoryExists(filename)
 {
-    try
-    {
-        statSync(dirPath);
-    }
-    catch
-    {
-        mkdirSync(dirPath);
-    }
+    const stats = await tryStat(filename);
+    return stats ? stats.isDirectory() : false;
 }
 
 /**
@@ -74,6 +61,12 @@ async function eslintWithPlugins(options)
     return engine;
 }
 
+async function fileExists(filename)
+{
+    const stats = await tryStat(filename);
+    return stats ? stats.isFile() : false;
+}
+
 /**
  * Returns the path inside of the fixture directory.
  * @param {...string} args file path segments.
@@ -97,7 +90,7 @@ function hash(str)
 }
 
 // copy into clean area so as not to get "infected" by this project's .eslintrc files
-function setUpFixtures()
+async function setUpFixtures()
 {
     /*
      * GitHub Actions Windows and macOS runners occasionally exhibit
@@ -106,13 +99,27 @@ function setUpFixtures()
      * Mocha uses `this` to set timeouts on an individual hook level.
      */
     this.timeout(60 * 1000);
-    shell.mkdir('-p', fixtureDir);
-    shell.cp('-r', './test/fixtures/.', fixtureDir);
+    await mkdir(fixtureDir, { recursive: true });
+    await cp('./test/fixtures/.', fixtureDir, { recursive: true });
 }
 
-function tearDownFixtures()
+async function tearDownFixtures()
 {
-    shell.rm('-r', fixtureDir);
+    await rm(fixtureDir, { force: true, recursive: true });
+}
+
+async function tryStat(filename)
+{
+    try
+    {
+        const stats = await stat(filename);
+        return stats;
+    }
+    catch (error)
+    {
+        if (error.code !== 'ENOENT')
+            throw error;
+    }
 }
 
 describe
@@ -2072,7 +2079,7 @@ describe
                         const outputPath =
                         getFixturePath('autofix/semicolon-conflicting-fixes.expected.js');
                         const results = await eslint.lintParallel([inputPath]);
-                        const expectedOutput = readFileSync(outputPath, 'utf8');
+                        const expectedOutput = await readFile(outputPath, 'utf8');
 
                         assert.strictEqual(results[0].output, expectedOutput);
                     },
@@ -2095,7 +2102,7 @@ describe
                         const outputPath =
                         getFixturePath('autofix/return-conflicting-fixes.expected.js');
                         const results = await eslint.lintParallel([inputPath]);
-                        const expectedOutput = readFileSync(outputPath, 'utf8');
+                        const expectedOutput = await readFile(outputPath, 'utf8');
 
                         assert.strictEqual(results[0].output, expectedOutput);
                     },
@@ -2406,11 +2413,11 @@ describe
                  * @param {string} filePath The file path
                  * @returns {void}
                  */
-                function doDelete(filePath)
+                async function doDelete(filePath)
                 {
                     try
                     {
-                        unlinkSync(filePath);
+                        await unlink(filePath);
                     }
                     catch
                     {
@@ -2424,17 +2431,15 @@ describe
                 let cacheFilePath;
 
                 beforeEach
-                (
-                    () => { cacheFilePath = null; },
-                );
+                (() => { cacheFilePath = null; });
 
                 afterEach
                 (
-                    () =>
+                    async () =>
                     {
                         sinon.restore();
                         if (cacheFilePath)
-                            doDelete(cacheFilePath);
+                            await doDelete(cacheFilePath);
                     },
                 );
 
@@ -2449,15 +2454,12 @@ describe
                          * helper method to delete the directory used in testing
                          * @returns {void}
                          */
-                        function deleteCacheDir()
+                        async function deleteCacheDir()
                         {
                             try
                             {
-                                rmSync
-                                (
-                                    join(cwd, 'tmp/.cacheFileDir/'),
-                                    { recursive: true, force: true },
-                                );
+                                await rm
+                                (join(cwd, 'tmp/.cacheFileDir/'), { recursive: true, force: true });
                             }
                             catch
                             {
@@ -2468,11 +2470,9 @@ describe
                             }
                         }
 
-                        beforeEach
-                        (() => { deleteCacheDir(); });
+                        beforeEach(deleteCacheDir);
 
-                        afterEach
-                        (() => { deleteCacheDir(); });
+                        afterEach(deleteCacheDir);
 
                         it
                         (
@@ -2482,7 +2482,7 @@ describe
                             {
                                 assert
                                 (
-                                    !shell.test('-d', join(cwd, './tmp/.cacheFileDir/')),
+                                    !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
                                     'the cache directory already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
@@ -2508,11 +2508,8 @@ describe
 
                                 assert
                                 (
-                                    shell.test
-                                    (
-                                        '-f',
-                                        join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
-                                    ),
+                                    await fileExists
+                                    (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
                                     'the cache for eslint should have been created',
                                 );
                             },
@@ -2526,12 +2523,12 @@ describe
                             {
                                 assert
                                 (
-                                    !shell.test('-d', join(cwd, './tmp/.cacheFileDir/')),
+                                    !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
                                     'the cache directory already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
 
-                                mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
+                                await mkdir(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
                                 eslint =
                                 await ESLint.fromCLIOptions
                                 (
@@ -2553,11 +2550,8 @@ describe
 
                                 assert
                                 (
-                                    shell.test
-                                    (
-                                        '-f',
-                                        join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
-                                    ),
+                                    await fileExists
+                                    (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
                                     'the cache for eslint should have been created',
                                 );
                             },
@@ -2571,12 +2565,12 @@ describe
                             {
                                 assert
                                 (
-                                    !shell.test('-d', join(cwd, './tmp/.cacheFileDir/')),
+                                    !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
                                     'the cache directory already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
 
-                                mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
+                                await mkdir(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
                                 eslint =
                                 await ESLint.fromCLIOptions
                                 (
@@ -2598,11 +2592,8 @@ describe
 
                                 assert
                                 (
-                                    shell.test
-                                    (
-                                        '-f',
-                                        join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`),
-                                    ),
+                                    await fileExists
+                                    (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
                                     'the cache for eslint should have been created',
                                 );
                             },
@@ -2617,10 +2608,10 @@ describe
                     {
                         const cwd = getFixturePath('cli-engine');
                         cacheFilePath = join(cwd, '.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -2639,7 +2630,7 @@ describe
 
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'the cache for eslint should have been created at provided cwd',
                         );
                     },
@@ -2652,10 +2643,10 @@ describe
                     {
                         const cwd = getFixturePath('cache/src');
                         cacheFilePath = join(cwd, '.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -2694,7 +2685,7 @@ describe
                         }
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'the cache for eslint should have been created',
                         );
 
@@ -2732,7 +2723,7 @@ describe
                         assert.strictEqual(newResult.messages[0].ruleId, 'no-console');
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'The cache for ESLint should still exist',
                         );
                     },
@@ -2746,10 +2737,10 @@ describe
                     {
                         const cwd = getFixturePath('cache/src');
                         cacheFilePath = join(cwd, '.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -2779,7 +2770,7 @@ describe
                         );
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'the cache for eslint should have been created',
                         );
 
@@ -2815,10 +2806,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -2840,7 +2831,7 @@ describe
 
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'the cache for eslint should have been created',
                         );
 
@@ -2850,7 +2841,7 @@ describe
 
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache for eslint should have been deleted since last run did ' +
                             'not use the cache',
                         );
@@ -2864,10 +2855,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -2905,10 +2896,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -2946,7 +2937,7 @@ describe
                         );
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'the cache for eslint should have been created',
                         );
 
@@ -2979,10 +2970,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -3016,14 +3007,14 @@ describe
                         );
 
                         // delete the file from the file system
-                        unlinkSync(toBeDeletedFile);
+                        await unlink(toBeDeletedFile);
 
                         /*
                          * file-entry-cache@2.0.0 will remove from the cache deleted files
                          * even when they were not part of the array of files to be analyzed
                          */
                         await eslint.lintParallel([badFile, goodFile]);
-                        cache = JSON.parse(readFileSync(cacheFilePath));
+                        cache = JSON.parse(await readFile(cacheFilePath));
 
                         assert.strictEqual
                         (
@@ -3055,10 +3046,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -3115,14 +3106,14 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
-                        writeFileSync(cacheFilePath, '');
+                        await writeFile(cacheFilePath, '');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
@@ -3140,13 +3131,13 @@ describe
                         const file = getFixturePath('cli-engine', 'console.js');
 
                         assert
-                        (shell.test('-f', cacheFilePath), 'the cache for eslint should exist');
+                        (await fileExists(cacheFilePath), 'the cache for eslint should exist');
 
                         await eslint.lintParallel([file]);
 
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'the cache for eslint should still exist',
                         );
                     },
@@ -3158,15 +3149,15 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
                         // intenationally invalid to additionally make sure it isn't used
-                        writeFileSync(cacheFilePath, '[]');
+                        await writeFile(cacheFilePath, '[]');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
@@ -3183,13 +3174,13 @@ describe
                         const file = getFixturePath('cli-engine', 'console.js');
 
                         assert
-                        (shell.test('-f', cacheFilePath), 'the cache for eslint should exist');
+                        (await fileExists(cacheFilePath), 'the cache for eslint should exist');
 
                         await eslint.lintParallel([file]);
 
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache for eslint should have been deleted',
                         );
                     },
@@ -3201,10 +3192,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = resolve('.cache/custom-cache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -3230,7 +3221,7 @@ describe
 
                         assert
                         (
-                            shell.test('-f', cacheFilePath),
+                            await fileExists(cacheFilePath),
                             'the cache for eslint should have been created',
                         );
 
@@ -3262,10 +3253,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -3307,7 +3298,7 @@ describe
                             );
                             assert
                             (
-                                shell.test('-f', cacheFilePath),
+                                await fileExists(cacheFilePath),
                                 'the cache for eslint should have been created',
                             );
 
@@ -3342,10 +3333,10 @@ describe
                     async () =>
                     {
                         cacheFilePath = getFixturePath('.eslintcache');
-                        doDelete(cacheFilePath);
+                        await doDelete(cacheFilePath);
                         assert
                         (
-                            !shell.test('-f', cacheFilePath),
+                            !await fileExists(cacheFilePath),
                             'the cache file already exists and wasn\'t successfully deleted',
                         );
 
@@ -3384,7 +3375,7 @@ describe
 
                             assert
                             (
-                                shell.test('-f', cacheFilePath),
+                                await fileExists(cacheFilePath),
                                 'the cache for eslint should have been created',
                             );
 
@@ -3426,10 +3417,10 @@ describe
                             async () =>
                             {
                                 cacheFilePath = getFixturePath('.eslintcache');
-                                doDelete(cacheFilePath);
+                                await doDelete(cacheFilePath);
                                 assert
                                 (
-                                    !shell.test('-f', cacheFilePath),
+                                    !await fileExists(cacheFilePath),
                                     'the cache file already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
@@ -3470,7 +3461,8 @@ describe
                                 );
 
                                 // this should result in a changed entry
-                                shell.touch(goodFile);
+                                const now = Date.now();
+                                await utimes(goodFile, now, now);
                                 fileCache = fCache.createFromFile(cacheFilePath);
 
                                 assert
@@ -3493,10 +3485,10 @@ describe
                             async () =>
                             {
                                 cacheFilePath = getFixturePath('.eslintcache');
-                                doDelete(cacheFilePath);
+                                await doDelete(cacheFilePath);
                                 assert
                                 (
-                                    !shell.test('-f', cacheFilePath),
+                                    !await fileExists(cacheFilePath),
                                     'the cache file already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
@@ -3537,7 +3529,8 @@ describe
                                 );
 
                                 // this should NOT result in a changed entry
-                                shell.touch(goodFile);
+                                const now = Date.now();
+                                await utimes(goodFile, now, now);
                                 fileCache = fCache.createFromFile(cacheFilePath, true);
                                 entries = fileCache.normalizeEntries([badFile, goodFile]);
 
@@ -3563,10 +3556,10 @@ describe
                             async () =>
                             {
                                 cacheFilePath = getFixturePath('.eslintcache');
-                                doDelete(cacheFilePath);
+                                await doDelete(cacheFilePath);
                                 assert
                                 (
-                                    !shell.test('-f', cacheFilePath),
+                                    !await fileExists(cacheFilePath),
                                     'the cache file already exists and wasn\'t successfully ' +
                                     'deleted',
                                 );
@@ -3591,7 +3584,7 @@ describe
                                 const goodFile = getFixturePath('cache/src', 'test-file.js');
                                 const goodFileCopy =
                                 join(`${dirname(goodFile)}`, 'test-file-copy.js');
-                                shell.cp(goodFile, goodFileCopy);
+                                await copyFile(goodFile, goodFileCopy);
                                 await eslint.lintParallel([badFile, goodFileCopy]);
                                 let fileCache = fCache.createFromFile(cacheFilePath, true);
                                 const entries = fileCache.normalizeEntries([badFile, goodFileCopy]);
@@ -3610,7 +3603,8 @@ describe
                                 );
 
                                 // this should result in a changed entry
-                                shell.sed('-i', 'abc', 'xzy', goodFileCopy);
+                                const oldContent = await readFile(goodFileCopy, 'utf8');
+                                await writeFile(goodFileCopy, oldContent.replace('abc', 'xyz'));
                                 fileCache = fCache.createFromFile(cacheFilePath, true);
 
                                 assert
@@ -3717,7 +3711,7 @@ describe
                     'should throw if the directory exists and is empty',
                     async () =>
                     {
-                        ensureDirectoryExists(getFixturePath('cli-engine/empty'));
+                        await mkdir(getFixturePath('cli-engine/empty'), { recursive: true });
                         await assert.rejects
                         (
                             async () => { await eslint.lintParallel(['empty']); },
@@ -3788,57 +3782,68 @@ describe
             () =>
             {
                 const root = join(tmpdir(), 'eslint/eslint/multiple-processors');
-                const commonFiles =
-                {
-                    'node_modules/pattern-processor/index.js':
-                    readFileSync
-                    (
-                        new URL('./fixtures/processors/pattern-processor.js', import.meta.url),
-                        'utf8',
-                    ),
-                    'node_modules/eslint-plugin-markdown/index.js':
-                    `
-                    const { defineProcessor } = require("pattern-processor");
-                    const processor = defineProcessor(${/```(\w+)\n([\s\S]+?)\n```/gu});
-                    exports.processors =
-                    {
-                        "markdown":     { ...processor, supportsAutofix: true },
-                        "non-fixable":  processor,
-                    };
-                    `,
-                    'node_modules/eslint-plugin-html/index.js':
-                    `
-                    const { defineProcessor } = require("pattern-processor");
-                    const processor =
-                    defineProcessor(${/<script lang="(\w*)">\n([\s\S]+?)\n<\/script>/gu});
-                    const legacyProcessor =
-                    defineProcessor(${/<script lang="(\w*)">\n([\s\S]+?)\n<\/script>/gu}, true);
-                    exports.processors =
-                    {
-                        "html": { ...processor, supportsAutofix: true },
-                        "non-fixable": processor,
-                        "legacy": legacyProcessor,
-                    };
-                    `,
-                    'test.md':
-                    unIndent`
-                    \`\`\`js
-                    console.log("hello")
-                    \`\`\`
-                    \`\`\`html
-                    <div>Hello</div>
-                    <script lang="js">
-                        console.log("hello")
-                    </script>
-                    <script lang="ts">
-                        console.log("hello")
-                    </script>
-                    \`\`\`
-                    `,
-                };
+                let commonFiles;
 
                 // unique directory for each test to avoid quirky disk-cleanup errors
                 let id;
+
+                before
+                (
+                    async () =>
+                    {
+                        commonFiles =
+                        {
+                            'node_modules/pattern-processor/index.js':
+                            await readFile
+                            (
+                                new URL
+                                ('./fixtures/processors/pattern-processor.js', import.meta.url),
+                                'utf8',
+                            ),
+                            'node_modules/eslint-plugin-markdown/index.js':
+                            `
+                            const { defineProcessor } = require("pattern-processor");
+                            const processor = defineProcessor(${/```(\w+)\n([\s\S]+?)\n```/gu});
+                            exports.processors =
+                            {
+                                "markdown":     { ...processor, supportsAutofix: true },
+                                "non-fixable":  processor,
+                            };
+                            `,
+                            'node_modules/eslint-plugin-html/index.js':
+                            `
+                            const { defineProcessor } = require("pattern-processor");
+                            const processor =
+                            defineProcessor
+                            (${/<script lang="(\w*)">\n([\s\S]+?)\n<\/script>/gu});
+                            const legacyProcessor =
+                            defineProcessor
+                            (${/<script lang="(\w*)">\n([\s\S]+?)\n<\/script>/gu}, true);
+                            exports.processors =
+                            {
+                                "html": { ...processor, supportsAutofix: true },
+                                "non-fixable": processor,
+                                "legacy": legacyProcessor,
+                            };
+                            `,
+                            'test.md':
+                            unIndent`
+                            \`\`\`js
+                            console.log("hello")
+                            \`\`\`
+                            \`\`\`html
+                            <div>Hello</div>
+                            <script lang="js">
+                                console.log("hello")
+                            </script>
+                            <script lang="ts">
+                                console.log("hello")
+                            </script>
+                            \`\`\`
+                            `,
+                        };
+                    },
+                );
 
                 beforeEach
                 (
@@ -5046,7 +5051,7 @@ describe
                 const inputPath = getFixturePath('fix-types/fix-only-semi.js');
                 const outputPath = getFixturePath('fix-types/fix-only-semi.expected.js');
                 const results = await eslint.lintParallel([inputPath]);
-                const expectedOutput = readFileSync(outputPath, 'utf8');
+                const expectedOutput = await readFile(outputPath, 'utf8');
 
                 assert.strictEqual(results[0].output, expectedOutput);
             },
@@ -5070,7 +5075,7 @@ describe
                 const outputPath =
                 getFixturePath('fix-types/fix-only-prefer-arrow-callback.expected.js');
                 const results = await eslint.lintParallel([inputPath]);
-                const expectedOutput = readFileSync(outputPath, 'utf8');
+                const expectedOutput = await readFile(outputPath, 'utf8');
 
                 assert.strictEqual(results[0].output, expectedOutput);
             },
@@ -5096,7 +5101,7 @@ describe
                 const outputPath =
                 getFixturePath('fix-types/fix-both-semi-and-prefer-arrow-callback.expected.js');
                 const results = await eslint.lintParallel([inputPath]);
-                const expectedOutput = readFileSync(outputPath, 'utf8');
+                const expectedOutput = await readFile(outputPath, 'utf8');
 
                 assert.strictEqual(results[0].output, expectedOutput);
             },
@@ -5160,6 +5165,102 @@ describe
                 );
                 await assert.rejects
                 (async () => await eslint.lintParallel(['test.js']), { message: 'foobar' });
+            },
+        );
+    },
+);
+
+describe
+(
+    'Fix types when \'quiet\' option is true',
+    () =>
+    {
+        let eslint;
+
+        before(setUpFixtures);
+
+        after(tearDownFixtures);
+
+        it
+        (
+            'should fix all except one problem when \'fixType\' array has only \'suggestion\'',
+            async () =>
+            {
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:        join(fixtureDir, '..'),
+                        fix:        true,
+                        fixType:    ['suggestion'],
+                        quiet:      true,
+                    },
+                );
+                const inputPath =
+                getFixturePath('fix-types/fix-all-except-unicode-bom.js');
+                const outputPath =
+                getFixturePath('fix-types/fix-all-except-unicode-bom.expected.js');
+                const results = await eslint.lintParallel([inputPath]);
+                const expectedOutput = await readFile(outputPath, 'utf8');
+
+                assert.strictEqual(results[0].output, expectedOutput);
+            },
+        );
+    },
+);
+
+describe
+(
+    'Cache file deletion',
+    () =>
+    {
+        let cacheFilePath;
+        let eslint;
+
+        before(setUpFixtures);
+
+        after(tearDownFixtures);
+
+        afterEach
+        (
+            async () =>
+            {
+                if (cacheFilePath)
+                    await rm(cacheFilePath, { force: true, recursive: true });
+                cacheFilePath = undefined;
+            },
+        );
+
+        it
+        (
+            'should throw an error if the cache file cannot be deleted',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await rm(cacheFilePath, { force: true, recursive: true });
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                const error = Object.assign(Error('access denied'), { code: 'EACCES' });
+                sinon.stub(fsPromises, 'unlink').rejects(error);
+                const cliOptions =
+                {
+                    // specifying cache false the cache will be deleted
+                    cache:          false,
+                    cacheLocation:  cacheFilePath,
+                    rule:
+                    {
+                        'no-console':       0,
+                        'no-unused-vars':   2,
+                    },
+                    cwd:            join(fixtureDir, '..'),
+                };
+                eslint = await ESLint.fromCLIOptions(cliOptions);
+                const file = getFixturePath('cache/src', 'test-file.js');
+                await assert.rejects(eslint.lintParallel([file]), error);
             },
         );
     },

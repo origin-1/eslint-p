@@ -1373,9 +1373,10 @@ describe
             () =>
             {
                 const flag = '--no-config-lookup';
+                const outDir = 'test/output';
 
                 afterEach
-                (() => { rmSync('tests/output', { force: true, recursive: true }); });
+                (() => { rmSync(outDir, { force: true, recursive: true }); });
 
                 it
                 (
@@ -1384,12 +1385,12 @@ describe
                     {
                         const filePath = getFixturePath('single-quoted.js');
                         const code =
-                        `${flag} --rule 'quotes: [1, double]' --o tests/output/eslint-output.txt ${
+                        `${flag} --rule 'quotes: [1, double]' --o ${outDir}/eslint-output.txt ${
                         filePath}`;
                         await execute(code);
 
                         assert
-                        (readFileSync('tests/output/eslint-output.txt', 'utf8').includes(filePath));
+                        (readFileSync(`${outDir}/eslint-output.txt`, 'utf8').includes(filePath));
                         assert(log.info.notCalled);
                     },
                 );
@@ -1401,8 +1402,8 @@ describe
                     {
                         const filePath = getFixturePath('single-quoted.js');
                         const code =
-                        `${flag} --rule 'quotes: [1, double]' --o tests/output ${filePath}`;
-                        mkdirSync('tests/output');
+                        `${flag} --rule 'quotes: [1, double]' --o ${outDir} ${filePath}`;
+                        mkdirSync(outDir);
                         const exit = await execute(code);
 
                         assert.strictEqual(exit, 2);
@@ -1418,9 +1419,9 @@ describe
                     {
                         const filePath = getFixturePath('single-quoted.js');
                         const code =
-                        `${flag} --rule 'quotes: [1, double]' --o tests/output/eslint-output.txt ${
+                        `${flag} --rule 'quotes: [1, double]' --o ${outDir}/eslint-output.txt ${
                         filePath}`;
-                        writeFileSync('tests/output', 'foo');
+                        writeFileSync(outDir, 'foo');
                         const exit = await execute(code);
 
                         assert.strictEqual(exit, 2);
