@@ -23,16 +23,16 @@
     "test": "mocha test/*.js"
   },
   "dependencies": {
-    "eslint": "^8.56.0"
+    "eslint": "9.0.0-alpha.0"
   },
   "devDependencies": {
-    "@origin-1/eslint-config": "^0.19.0",
-    "acorn": "^8.11.2",
+    "@origin-1/eslint-config": "^0.20.0",
+    "acorn": "^8.11.3",
     "c8js": "^0.6.0",
     "esprima": "^4.0.1",
-    "file-entry-cache": "^7.0.2",
+    "file-entry-cache": "^8.0.0",
     "fs-teardown": "^0.3.2",
-    "globals": "^13.23.0",
+    "globals": "^13.24.0",
     "imurmurhash": "^0.1.4",
     "mocha": "^10.2.0",
     "shelljs": "^0.8.5",
@@ -42,7 +42,7 @@
     "node": ">=17"
   },
   "imports": {
-    "#patch-flat-eslint-with-cache-test": "./test/_utils/patch-flat-eslint-with-cache-test.js"
+    "#patch-eslint-with-cache-test": "./test/_utils/patch-eslint-with-cache-test.js"
   },
   "type": "module"
 }

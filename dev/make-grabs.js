@@ -17,12 +17,13 @@ import { parse }                        from 'acorn';
                 'count-errors.js',
                 'create-print-results.js',
                 'quiet-fix-predicate.js',
+                'quiet-rule-filter.js',
             ],
             grabDirURL,
         ),
         makeGrabs
         (
-            `${eslintDirURL}lib/eslint/flat-eslint.js`,
+            `${eslintDirURL}lib/eslint/eslint.js`,
             [
                 'create-calculate-config-array.js',
                 'create-process-lint-report.js',
@@ -66,9 +67,9 @@ function findCuts(templateCode, comments, sourceCode, sourceNodes)
             if (match)
             {
                 const { name } = match.groups;
-                const functionCode = getFunctionCode(sourceCode, sourceNodes, name);
+                const declarationCode = getDeclarationCode(sourceCode, sourceNodes, name);
                 const indentSpace = getIndentBefore(templateCode, comment.start);
-                const replacement = indent(functionCode, indentSpace);
+                const replacement = indent(declarationCode, indentSpace);
                 const cut =
                 {
                     start:  comment.start - indentSpace.length,
@@ -83,15 +84,15 @@ function findCuts(templateCode, comments, sourceCode, sourceNodes)
     return cuts;
 }
 
-function getFunctionCode(code, nodes, name)
+function getDeclarationCode(code, nodes, name)
 {
     let prevNode = null;
     for (const node of nodes)
     {
-        if (node.type === 'FunctionDeclaration')
+        switch (node.type)
         {
-            const { id } = node;
-            if (id.type === 'Identifier' && id.name === name)
+        case 'FunctionDeclaration':
+            if (hasIdWithName(node, name))
             {
                 let start;
                 if (prevNode)
@@ -99,9 +100,18 @@ function getFunctionCode(code, nodes, name)
                 else
                     ({ start } = node);
                 const { end } = node;
-                const functionCode = trimLeadingEmptyLines(code.slice(start, end));
-                return functionCode;
+                const declarationCode = trimLeadingEmptyLines(code.slice(start, end));
+                return declarationCode;
             }
+            break;
+        case 'VariableDeclaration':
+            if (node.declarations.some(declarator => hasIdWithName(declarator, name)))
+            {
+                const { start, end } = node;
+                const declarationCode = trimLeadingEmptyLines(code.slice(start, end));
+                return declarationCode;
+            }
+            break;
         }
         prevNode = node;
     }
@@ -119,6 +129,12 @@ function getIndentBefore(code, end)
             return '';
     }
     return code.slice(index + 1, end);
+}
+
+function hasIdWithName(node, name)
+{
+    const { id } = node;
+    return id.type === 'Identifier' && id.name === name;
 }
 
 function indent(code, indentSpace)

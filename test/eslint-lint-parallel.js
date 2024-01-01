@@ -10,21 +10,21 @@ import { platform, tmpdir }                             from 'node:os';
 import { basename, dirname, join, relative, resolve }   from 'node:path';
 import { fileURLToPath }                                from 'node:url';
 import eslintDirURL                                     from '../lib/default-eslint-dir-url.js';
-import patchFlatESLint                                  from '../lib/patch-flat-eslint.js';
+import patchESLint                                      from '../lib/patch-eslint.js';
 import { createCustomTeardown, unIndent }               from './_utils/index.js';
 import fCache                                           from 'file-entry-cache';
 import murmur                                           from 'imurmurhash';
 import shell                                            from 'shelljs';
 import sinon                                            from 'sinon';
 
-async function getFlatESLint()
+async function getESLint()
 {
-    const { default: { FlatESLint } } = await import('eslint/use-at-your-own-risk');
-    await patchFlatESLint(FlatESLint, eslintDirURL);
-    return FlatESLint;
+    const { ESLint } = await import('eslint');
+    await patchESLint(ESLint, eslintDirURL);
+    return ESLint;
 }
 
-const FlatESLint = await getFlatESLint();
+const ESLint = await getESLint();
 
 const examplePluginName = 'eslint-plugin-example';
 const examplePluginNameWithNamespace = '@eslint/eslint-plugin-example';
@@ -58,7 +58,7 @@ function ensureDirectoryExists(dirPath)
 async function eslintWithPlugins(options)
 {
     const engine =
-    await FlatESLint.fromCLIOptions
+    await ESLint.fromCLIOptions
     (
         {
             ...options,
@@ -134,7 +134,7 @@ describe
                 const parserURL =
                 new URL('./fixtures/configurations/parser/custom.js', import.meta.url);
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    originalDir,
@@ -157,7 +157,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    originalDir,
@@ -180,7 +180,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    originalDir,
@@ -210,12 +210,11 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
-                        overrideConfig:
-                        { languageOptions: { parserOptions: { ecmaVersion: 2022 } } },
-                        parser: 'espree',
+                        parserOptions:  { ecmaVersion: 2022 },
+                        parser:         'espree',
                     },
                 );
                 const results = await eslint.lintParallel(['lib/eslint-p.js']);
@@ -233,7 +232,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         parser: 'esprima',
@@ -254,7 +253,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:            getFixturePath('..'),
@@ -272,7 +271,7 @@ describe
             '`true`',
             async () =>
             {
-                eslint = await FlatESLint.fromCLIOptions({ cwd: getFixturePath('..') });
+                eslint = await ESLint.fromCLIOptions({ cwd: getFixturePath('..') });
                 await eslint.lintParallel('fixtures/undef*.js');
             },
         );
@@ -284,7 +283,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    getFixturePath('..'),
@@ -301,7 +300,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    getFixturePath(),
@@ -318,12 +317,115 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 ({ overrideConfig: { languageOptions: { parser: 'test11' } } });
                 await assert.rejects
                 (
                     async () => await eslint.lintParallel(['lib/eslint-p.js']),
                     /Expected object with parse\(\) or parseForESLint\(\) method/u,
+                );
+            },
+        );
+
+        describe
+        (
+            'Invalid inputs',
+            () =>
+            {
+                [
+                    ['a string with a single space', ' '],
+                    ['an array with one empty string', ['']],
+                    ['an array with two empty strings', ['', '']],
+                    ['undefined', void 0],
+                ]
+                .forEach
+                (
+                    ([name, value]) =>
+                    {
+                        it
+                        (
+                            `should throw an error when passed ${name}`,
+                            async () =>
+                            {
+                                eslint = await ESLint.fromCLIOptions();
+                                await assert.rejects
+                                (
+                                    async () => await eslint.lintParallel(value),
+                                    {
+                                        message:
+                                        '\'patterns\' must be a non-empty string or an array of ' +
+                                        'non-empty strings',
+                                    },
+                                );
+                            },
+                        );
+                    },
+                );
+            },
+        );
+
+        describe
+        (
+            'Normalized inputs', () =>
+            {
+                [
+                    ['an empty string', ''],
+                    ['an empty array', []],
+                ]
+                .forEach
+                (
+                    ([name, value]) =>
+                    {
+                        it
+                        (
+                            `should normalize to '.' when ${name} is passed`,
+                            async () =>
+                            {
+                                eslint =
+                                await ESLint.fromCLIOptions
+                                (
+                                    {
+                                        ignore:         false,
+                                        cwd:            getFixturePath('files'),
+                                        overrideConfig: { files: ['**/*.js'] },
+                                        config:         getFixturePath('eslint.config.js'),
+                                    },
+                                );
+                                const results = await eslint.lintParallel(value);
+
+                                assert.strictEqual(results.length, 2);
+                                assert.strictEqual
+                                (results[0].filePath, getFixturePath('files/.bar.js'));
+                                assert.strictEqual(results[0].messages.length, 0);
+                                assert.strictEqual
+                                (results[1].filePath, getFixturePath('files/foo.js'));
+                                assert.strictEqual(results[1].messages.length, 0);
+                                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                            },
+                        );
+
+                        it
+                        (
+                            `should return an empty array when ${name} is passed with ` +
+                            'passOnNoPatterns: true',
+                            async () =>
+                            {
+                                eslint = await ESLint.fromCLIOptions
+                                (
+                                    {
+                                        ignore:             false,
+                                        cwd:                getFixturePath('files'),
+                                        overrideConfig:     { files: ['**/*.js'] },
+                                        config:             getFixturePath('eslint.config.js'),
+                                        passOnNoPatterns:   true,
+                                    },
+                                );
+                                const results = await eslint.lintParallel(value);
+
+                                assert.strictEqual(results.length, 0);
+                            },
+                        );
+                    },
                 );
             },
         );
@@ -334,7 +436,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:                join(fixtureDir, '..'),
@@ -356,7 +458,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore:             false,
@@ -381,7 +483,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore:         false,
@@ -406,7 +508,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore:         false,
@@ -430,7 +532,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore:         false,
@@ -455,7 +557,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:            getFixturePath('{curly-path}', 'server'),
@@ -482,7 +584,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:            getFixturePath('promise-config'),
@@ -511,7 +613,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('dot-files'),
@@ -539,7 +641,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('dot-files'),
@@ -567,7 +669,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('dot-files'),
@@ -598,7 +700,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 ignore:         false,
@@ -622,7 +724,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('example-app2'),
@@ -646,7 +748,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('example-app2'),
@@ -669,7 +771,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('example-app2'),
@@ -714,7 +816,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:                        getFixturePath('example-app2'),
@@ -736,7 +838,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:                        getFixturePath('example-app2'),
@@ -765,7 +867,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 ignore:         false,
@@ -788,7 +890,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 ignore:             false,
@@ -828,7 +930,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 ignore:             false,
@@ -862,7 +964,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore:         false,
@@ -889,7 +991,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore:         false,
@@ -919,7 +1021,7 @@ describe
                 async () =>
                 {
                     eslint =
-                    await FlatESLint.fromCLIOptions
+                    await ESLint.fromCLIOptions
                     (
                         {
                             ignore:         false,
@@ -947,7 +1049,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore:             false,
@@ -976,7 +1078,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('cli-engine'),
@@ -1008,7 +1110,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('cli-engine'),
@@ -1041,7 +1143,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('cli-engine'),
@@ -1074,7 +1176,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('cli-engine'),
@@ -1094,11 +1196,11 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('cli-engine'),
-                                overrideConfig: { rules: { quotes: [2, 'single'] } },
+                                cwd:    getFixturePath('cli-engine'),
+                                rule:   { quotes: [2, 'single'] },
                             },
                         );
                         const results = await eslint.lintParallel(['hidden/.hiddenfolder/*.js']);
@@ -1117,8 +1219,7 @@ describe
                     'should ignore node_modules files when using ignore file',
                     async () =>
                     {
-                        eslint =
-                        await FlatESLint.fromCLIOptions({ cwd: getFixturePath('cli-engine') });
+                        eslint = await ESLint.fromCLIOptions({ cwd: getFixturePath('cli-engine') });
                         await assert.rejects
                         (
                             async () => { await eslint.lintParallel(['node_modules']); },
@@ -1134,7 +1235,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('cli-engine'),
@@ -1156,8 +1257,8 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
-                        ({ config: getFixturePath('eslint.config_with_ignores.js') });
+                        await ESLint.fromCLIOptions
+                        ({ config: getFixturePath('eslint.config-with-ignores.js') });
                         await assert.rejects
                         (
                             async () =>
@@ -1174,8 +1275,8 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
-                        ({ config: getFixturePath('eslint.config_with_ignores.js') });
+                        await ESLint.fromCLIOptions
+                        ({ config: getFixturePath('eslint.config-with-ignores.js') });
                         const expectedRegExp =
                         /All files matched by '\.\/test\/fixtures\/cli-engine\/' are ignored\./u;
                         await assert.rejects
@@ -1194,11 +1295,11 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                overrideConfig: { rules: { quotes: [2, 'double'] } },
-                                cwd:            getFixturePath('cli-engine', 'nested_node_modules'),
+                                rule:   { quotes: [2, 'double'] },
+                                cwd:    getFixturePath('cli-engine', 'nested_node_modules'),
                             },
                         );
                         const results = await eslint.lintParallel(['.']);
@@ -1220,12 +1321,12 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 config:
-                                getFixturePath('cli-engine/eslint.config_with_ignores2.js'),
-                                overrideConfig: { rules: { quotes: [2, 'double'] } },
+                                getFixturePath('cli-engine/eslint.config-with-ignores2.js'),
+                                rule: { quotes: [2, 'double'] },
                             },
                         );
                         const expectedRegExp =
@@ -1245,7 +1346,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         ({ ignorePattern: ['test/fixtures/single-quoted.js'] });
                         await assert.rejects
                         (
@@ -1258,14 +1359,25 @@ describe
 
                 it
                 (
+                    'should not throw an error when ignorePatterns is an empty array',
+                    async () =>
+                    {
+                        eslint = await ESLint.fromCLIOptions({ ignorePattern: [] });
+                        await assert.doesNotReject
+                        (async () => { await eslint.lintParallel(['*.js']); });
+                    },
+                );
+
+                it
+                (
                     'should return a warning when an explicitly given file is ignored',
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                config: 'eslint.config_with_ignores.js',
+                                config: 'eslint.config-with-ignores.js',
                                 cwd:    getFixturePath(),
                             },
                         );
@@ -1298,10 +1410,10 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                config:         'eslint.config_with_ignores.js',
+                                config:         'eslint.config-with-ignores.js',
                                 cwd:            getFixturePath(),
                                 warnIgnored:    false,
                             },
@@ -1320,10 +1432,10 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                config: 'eslint.config_with_ignores.js',
+                                config: 'eslint.config-with-ignores.js',
                                 cwd:    getFixturePath(),
                             },
                         );
@@ -1356,13 +1468,13 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath(),
-                                ignore:         false,
-                                config:         getFixturePath('eslint.config_with_ignores.js'),
-                                overrideConfig: { rules: { 'no-undef': 2 } },
+                                cwd:    getFixturePath(),
+                                ignore: false,
+                                config: getFixturePath('eslint.config-with-ignores.js'),
+                                rule:   { 'no-undef': 2 },
                             },
                         );
                         const filePath = getFixturePath('undef.js');
@@ -1385,7 +1497,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('ignores-relative/subdir'),
@@ -1407,7 +1519,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('ignores-directory'),
@@ -1447,7 +1559,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('ignores-subdirectory'),
@@ -1474,7 +1586,7 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('ignores-subdirectory/subdir'),
@@ -1496,7 +1608,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            getFixturePath('ignores-self'),
@@ -1520,7 +1632,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: getFixturePath('ignores-relative'),
@@ -1552,7 +1664,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: getFixturePath('ignores-directory'),
@@ -1587,7 +1699,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
@@ -1614,12 +1726,12 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
-                        cwd:            getFixturePath(),
-                        overrideConfig: { rules: { quotes: ['error', 'double'] } },
-                        ignore:         false,
+                        cwd:    getFixturePath(),
+                        rule:   { quotes: ['error', 'double'] },
+                        ignore: false,
                     },
                 );
                 const results = await eslint.lintParallel([getFixturePath('single-quoted.js')]);
@@ -1643,17 +1755,14 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd: join(fixtureDir, '..'),
-                        overrideConfig:
+                        rule:
                         {
-                            rules:
-                            {
-                                semi:   1,
-                                strict: 0,
-                            },
+                            semi:   1,
+                            strict: 0,
                         },
                     },
                 );
@@ -1712,7 +1821,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    join(fixtureDir, '..'),
@@ -1733,18 +1842,15 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
-                        cwd: join(fixtureDir, '..'),
-                        overrideConfig:
+                        cwd:    join(fixtureDir, '..'),
+                        global: ['window'],
+                        rule:
                         {
-                            languageOptions: { globals: { window: false } },
-                            rules:
-                            {
-                                'no-alert': 0,
-                                'no-undef': 2,
-                            },
+                            'no-alert': 0,
+                            'no-undef': 2,
                         },
                     },
                 );
@@ -1763,7 +1869,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    join(fixtureDir, '..'),
@@ -1784,13 +1890,13 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
-                        cwd:            join(fixtureDir, '..'),
-                        config:         getFixturePath('eslint.config.js'),
-                        ignore:         false,
-                        overrideConfig: { rules: { semi: 2 } },
+                        cwd:    join(fixtureDir, '..'),
+                        config: getFixturePath('eslint.config.js'),
+                        ignore: false,
+                        rule:   { semi: 2 },
                     },
                 );
                 const failFilePath = getFixturePath('missing-semicolon.js');
@@ -1819,7 +1925,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         ignore: false,
@@ -1841,7 +1947,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:    getFixturePath(),
@@ -1870,18 +1976,14 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: originalDir,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'indent-legacy': 1,
-                                        'require-jsdoc': 1,
-                                        'valid-jsdoc':   1,
-                                    },
+                                    'indent-legacy':    1,
+                                    'callback-return':  1,
                                 },
                             },
                         );
@@ -1892,8 +1994,7 @@ describe
                             results[0].usedDeprecatedRules,
                             [
                                 { ruleId: 'indent-legacy', replacedBy: ['indent'] },
-                                { ruleId: 'require-jsdoc', replacedBy: [] },
-                                { ruleId: 'valid-jsdoc', replacedBy: [] },
+                                { ruleId: 'callback-return', replacedBy: [] },
                             ],
                         );
                     },
@@ -1905,18 +2006,14 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: originalDir,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        eqeqeq:             1,
-                                        'valid-jsdoc':      0,
-                                        'require-jsdoc':    0,
-                                    },
+                                    eqeqeq:             1,
+                                    'callback-return':  0,
                                 },
                             },
                         );
@@ -1932,7 +2029,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: originalDir,
@@ -1964,7 +2061,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: join(fixtureDir, '..'),
@@ -1987,7 +2084,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: join(fixtureDir, '..'),
@@ -2022,21 +2119,18 @@ describe
                         }
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd: join(fixtureDir, '..'),
                                 fix: true,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        semi:              2,
-                                        quotes:            [2, 'double'],
-                                        eqeqeq:            2,
-                                        'no-undef':        2,
-                                        'space-infix-ops': 2,
-                                    },
+                                    semi:              2,
+                                    quotes:            [2, 'double'],
+                                    eqeqeq:            2,
+                                    'no-undef':        2,
+                                    'space-infix-ops': 2,
                                 },
                             },
                         );
@@ -2194,26 +2288,21 @@ describe
                         const baseOptions =
                         {
                             cwd: join(fixtureDir, '..'),
-                            overrideConfig:
+                            rule:
                             {
-                                rules:
-                                {
-                                    semi:              2,
-                                    quotes:            [2, 'double'],
-                                    eqeqeq:            2,
-                                    'no-undef':        2,
-                                    'space-infix-ops': 2,
-                                },
+                                semi:              2,
+                                quotes:            [2, 'double'],
+                                eqeqeq:            2,
+                                'no-undef':        2,
+                                'space-infix-ops': 2,
                             },
                         };
                         eslint =
-                        await FlatESLint.fromCLIOptions
-                        ({ ...baseOptions, cache: true, fix: false });
+                        await ESLint.fromCLIOptions({ ...baseOptions, cache: true, fix: false });
                         // Do initial lint run and populate the cache file
                         await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
                         eslint =
-                        await FlatESLint.fromCLIOptions
-                        ({ ...baseOptions, cache: true, fix: true });
+                        await ESLint.fromCLIOptions({ ...baseOptions, cache: true, fix: true });
                         const results =
                         await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
 
@@ -2263,8 +2352,8 @@ describe
                         await eslintWithPlugins
                         (
                             {
-                                cwd:            join(fixtureDir, '..'),
-                                overrideConfig: { rules: { 'example/example-rule': 1 } },
+                                cwd:    join(fixtureDir, '..'),
+                                rule:   { 'example/example-rule': 1 },
                             },
                         );
                         const results =
@@ -2285,11 +2374,11 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:                        join(fixtureDir, '..'),
-                                overrideConfig:             { rules: { 'test/example-rule': 1 } },
+                                rule:                       { 'test/example-rule': 1 },
                                 plugin:                     ['test'],
                                 resolvePluginsRelativeTo:   getFixturePath('plugins'),
                             },
@@ -2399,20 +2488,17 @@ describe
                                 );
 
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
                                         cwd,
                                         // specifying cache true the cache will be created
                                         cache:          true,
                                         cacheLocation:  './tmp/.cacheFileDir/',
-                                        overrideConfig:
+                                        rule:
                                         {
-                                            rules:
-                                            {
-                                                'no-console':       0,
-                                                'no-unused-vars':   2,
-                                            },
+                                            'no-console':       0,
+                                            'no-unused-vars':   2,
                                         },
                                         ignore:         false,
                                     },
@@ -2447,20 +2533,17 @@ describe
 
                                 mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
                                         cwd,
                                         // specifying cache true the cache will be created
                                         cache:          true,
                                         cacheLocation:  './tmp/.cacheFileDir/',
-                                        overrideConfig:
+                                        rule:
                                         {
-                                            rules:
-                                            {
-                                                'no-console':       0,
-                                                'no-unused-vars':   2,
-                                            },
+                                            'no-console':       0,
+                                            'no-unused-vars':   2,
                                         },
                                         ignore:         false,
                                     },
@@ -2495,20 +2578,17 @@ describe
 
                                 mkdirSync(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
                                         cwd,
                                         // specifying cache true the cache will be created
                                         cache:          true,
                                         cacheLocation:  './tmp/.cacheFileDir',
-                                        overrideConfig:
+                                        rule:
                                         {
-                                            rules:
-                                            {
-                                                'no-console':       0,
-                                                'no-unused-vars':   2,
-                                            },
+                                            'no-console':       0,
+                                            'no-unused-vars':   2,
                                         },
                                         ignore:         false,
                                     },
@@ -2545,13 +2625,13 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                cache:          true,
+                                cache:  true,
                                 cwd,
-                                overrideConfig: { rules: { 'no-console': 0 } },
-                                ignore:         false,
+                                rule:   { 'no-console': 0 },
+                                ignore: false,
                             },
                         );
                         const file = getFixturePath('cli-engine', 'console.js');
@@ -2580,24 +2660,21 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd,
                                 // specifying cache true the cache will be created
                                 cache:  true,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                                 ignore: false,
                             },
                         );
-                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
+                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
                         const file = join(cwd, 'test-file.js');
                         const results = await eslint.lintParallel([file]);
 
@@ -2622,24 +2699,21 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd,
                                 // specifying cache true the cache will be created
                                 cache:  true,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       2,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       2,
+                                    'no-unused-vars':   2,
                                 },
                                 ignore: false,
                             },
                         );
-                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
+                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
                         const [newResult] = await eslint.lintParallel([file]);
 
                         assert
@@ -2680,24 +2754,21 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd,
                                 // specifying cache true the cache will be created
                                 cache:  true,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                                 ignore: false,
                             },
                         );
-                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
+                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
                         const file = getFixturePath('cache/src', 'test-file.js');
                         const results = await eslint.lintParallel([file]);
 
@@ -2713,24 +2784,21 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd,
                                 // specifying cache true the cache will be created
                                 cache:  true,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                                 ignore: false,
                             },
                         );
-                        eslint.patchFlatESLintModuleURL = '#patch-flat-eslint-with-cache-test';
+                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
                         const cachedResults = await eslint.lintParallel([file]);
                         // assert the file was not processed because the cache was used
                         results[0].readFileCalled = false;
@@ -2759,17 +2827,14 @@ describe
                             // specifying cache true the cache will be created
                             cache:          true,
                             cacheLocation:  cacheFilePath,
-                            overrideConfig:
+                            rule:
                             {
-                                rules:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
+                                'no-console':       0,
+                                'no-unused-vars':   2,
                             },
                             cwd:            join(fixtureDir, '..'),
                         };
-                        eslint = await FlatESLint.fromCLIOptions(cliOptions);
+                        eslint = await ESLint.fromCLIOptions(cliOptions);
                         const file = getFixturePath('cache/src', 'test-file.js');
                         await eslint.lintParallel([file]);
 
@@ -2780,7 +2845,7 @@ describe
                         );
 
                         cliOptions.cache = false;
-                        eslint = await FlatESLint.fromCLIOptions(cliOptions);
+                        eslint = await ESLint.fromCLIOptions(cliOptions);
                         await eslint.lintParallel([file]);
 
                         assert
@@ -2814,17 +2879,14 @@ describe
                             // specifying cache false the cache will be deleted
                             cache:          false,
                             cacheLocation:  cacheFilePath,
-                            overrideConfig:
+                            rule:
                             {
-                                rules:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
+                                'no-console':       0,
+                                'no-unused-vars':   2,
                             },
                             cwd:            join(fixtureDir, '..'),
                         };
-                        eslint = await FlatESLint.fromCLIOptions(cliOptions);
+                        eslint = await ESLint.fromCLIOptions(cliOptions);
                         const file = getFixturePath('cache/src', 'test-file.js');
                         await eslint.lintParallel([file]);
 
@@ -2851,20 +2913,17 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                             },
                         );
@@ -2928,20 +2987,17 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                             },
                         );
@@ -3007,20 +3063,17 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                             },
                         );
@@ -3071,19 +3124,16 @@ describe
 
                         writeFileSync(cacheFilePath, '');
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            join(fixtureDir, '..'),
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                             },
                         );
@@ -3118,18 +3168,15 @@ describe
                         // intenationally invalid to additionally make sure it isn't used
                         writeFileSync(cacheFilePath, '[]');
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            join(fixtureDir, '..'),
                                 cacheLocation:  cacheFilePath,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                             },
                         );
@@ -3162,20 +3209,17 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 // specify a custom cache file
                                 cacheLocation:  cacheFilePath,
                                 // specifying cache true the cache will be created
                                 cache:          true,
-                                overrideConfig:
+                                rule:
                                 {
-                                    rules:
-                                    {
-                                        'no-console':       0,
-                                        'no-unused-vars':   2,
-                                    },
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
                                 },
                                 cwd:            join(fixtureDir, '..'),
                             },
@@ -3227,20 +3271,14 @@ describe
 
                         const deprecatedRuleId = 'space-in-parens';
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
-                                overrideConfig:
-                                {
-                                    rules:
-                                    {
-                                        [deprecatedRuleId]: 2,
-                                    },
-                                },
+                                rule:           { [deprecatedRuleId]: 2 },
                             },
                         );
                         const filePath = getFixturePath('cache/src', 'test-file.js');
@@ -3312,14 +3350,14 @@ describe
                         );
 
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            join(fixtureDir, '..'),
                                 // specifying cache true the cache will be created
                                 cache:          true,
                                 cacheLocation:  cacheFilePath,
-                                overrideConfig: { rules: { 'no-unused-vars': 2 } },
+                                rule:           { 'no-unused-vars': 2 },
                             },
                         );
                         const filePath = getFixturePath('cache/src', 'fail-file.js');
@@ -3397,7 +3435,7 @@ describe
                                 );
 
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
                                         cwd:            join(fixtureDir, '..'),
@@ -3405,13 +3443,10 @@ describe
                                         cache:          true,
                                         cacheLocation:  cacheFilePath,
                                         cacheStrategy:  'metadata',
-                                        overrideConfig:
+                                        rule:
                                         {
-                                            rules:
-                                            {
-                                                'no-console':       0,
-                                                'no-unused-vars':   2,
-                                            },
+                                            'no-console':       0,
+                                            'no-unused-vars':   2,
                                         },
                                     },
                                 );
@@ -3467,7 +3502,7 @@ describe
                                 );
 
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
                                         cwd:            join(fixtureDir, '..'),
@@ -3475,13 +3510,10 @@ describe
                                         cache:          true,
                                         cacheLocation:  cacheFilePath,
                                         cacheStrategy:  'content',
-                                        overrideConfig:
+                                        rule:
                                         {
-                                            rules:
-                                            {
-                                                'no-console':       0,
-                                                'no-unused-vars':   2,
-                                            },
+                                            'no-console':       0,
+                                            'no-unused-vars':   2,
                                         },
                                     },
                                 );
@@ -3540,7 +3572,7 @@ describe
                                 );
 
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
                                         cwd:            join(fixtureDir, '..'),
@@ -3548,15 +3580,11 @@ describe
                                         cache:          true,
                                         cacheLocation:  cacheFilePath,
                                         cacheStrategy:  'content',
-                                        overrideConfig:
+                                        rule:
                                         {
-                                            rules:
-                                            {
-                                                'no-console':       0,
-                                                'no-unused-vars':   2,
-                                            },
+                                            'no-console':       0,
+                                            'no-unused-vars':   2,
                                         },
-
                                     },
                                 );
                                 const badFile = getFixturePath('cache/src', 'fail-file.js');
@@ -3614,27 +3642,11 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                overrideConfigFile:         true,
-                                overrideConfig:
-                                [
-                                    {
-                                        processor: 'test-processor-1/txt',
-                                        rules:
-                                        {
-                                            'no-console':       2,
-                                            'no-unused-vars':   2,
-                                        },
-                                    },
-                                    {
-                                        files: ['**/*.txt', '**/*.txt/*.txt'],
-                                    },
-                                ],
-                                plugin:                     ['test-processor-1'],
-                                resolvePluginsRelativeTo:   getFixturePath('plugins'),
-                                cwd:                        join(fixtureDir, '..'),
+                                config: 'fixtures/eslint-config-test-processor-1.js',
+                                cwd:    join(fixtureDir, '..'),
                             },
                         );
                         const results =
@@ -3654,27 +3666,11 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
-                                overrideConfigFile:         true,
-                                overrideConfig:
-                                [
-                                    {
-                                        processor: 'test-processor-2/txt',
-                                        rules:
-                                        {
-                                            'no-console':       2,
-                                            'no-unused-vars':   2,
-                                        },
-                                    },
-                                    {
-                                        files: ['**/*.txt', '**/*.txt/*.txt'],
-                                    },
-                                ],
-                                plugin:                     ['test-processor-2'],
-                                resolvePluginsRelativeTo:   getFixturePath('plugins'),
-                                cwd:                        join(fixtureDir, '..'),
+                                config: 'fixtures/eslint-config-test-processor-2.js',
+                                cwd:    join(fixtureDir, '..'),
                             },
                         );
                         const results =
@@ -3699,8 +3695,7 @@ describe
                 (
                     async () =>
                     {
-                        eslint =
-                        await FlatESLint.fromCLIOptions({ cwd: getFixturePath('cli-engine') });
+                        eslint = await ESLint.fromCLIOptions({ cwd: getFixturePath('cli-engine') });
                     },
                 );
 
@@ -3891,7 +3886,7 @@ describe
                             },
                         );
                         await teardown.prepare();
-                        eslint = await FlatESLint.fromCLIOptions
+                        eslint = await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -3952,7 +3947,7 @@ describe
                         );
                         await teardown.prepare();
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4018,7 +4013,7 @@ describe
                         );
                         await teardown.prepare();
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4102,7 +4097,7 @@ describe
                         );
                         await teardown.prepare();
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4176,7 +4171,7 @@ describe
                         );
                         await teardown.prepare();
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4230,7 +4225,7 @@ describe
                             },
                         );
                         await teardown.prepare();
-                        eslint = await FlatESLint.fromCLIOptions
+                        eslint = await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4289,7 +4284,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4325,7 +4320,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4382,7 +4377,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4448,7 +4443,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4493,7 +4488,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4538,7 +4533,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4583,7 +4578,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4628,7 +4623,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4673,7 +4668,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4710,7 +4705,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4747,7 +4742,7 @@ describe
                         await teardown.prepare();
                         ({ cleanup } = teardown);
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:            teardown.getPath(),
@@ -4789,13 +4784,12 @@ describe
                                 await teardown.prepare();
                                 ({ cleanup } = teardown);
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
-                                        cwd:            teardown.getPath(),
-                                        overrideConfig:
-                                        { linterOptions: { reportUnusedDisableDirectives: 'off' } },
-                                        configLookup:   true,
+                                        cwd:                                    teardown.getPath(),
+                                        reportUnusedDisableDirectivesSeverity:  'off',
+                                        configLookup:                           true,
                                     },
                                 );
                                 const results = await eslint.lintParallel(['test.js']);
@@ -4828,16 +4822,12 @@ describe
                                 await teardown.prepare();
                                 ({ cleanup } = teardown);
                                 eslint =
-                                await FlatESLint.fromCLIOptions
+                                await ESLint.fromCLIOptions
                                 (
                                     {
-                                        cwd:            teardown.getPath(),
-                                        overrideConfig:
-                                        {
-                                            linterOptions:
-                                            { reportUnusedDisableDirectives: 'error' },
-                                        },
-                                        configLookup:   true,
+                                        cwd:                            teardown.getPath(),
+                                        reportUnusedDisableDirectives:  true,
+                                        configLookup:                   true,
                                     },
                                 );
                                 const results = await eslint.lintParallel(['test.js']);
@@ -4864,7 +4854,7 @@ describe
             'should throw if non-boolean value is given to \'options.warnIgnored\' option',
             async () =>
             {
-                eslint = await FlatESLint.fromCLIOptions({ configLookup: true });
+                eslint = await ESLint.fromCLIOptions({ configLookup: true });
                 await assert.rejects
                 (
                     () => eslint.lintParallel(777),
@@ -4874,6 +4864,104 @@ describe
                 (
                     () => eslint.lintParallel([null]),
                     /'patterns' must be a non-empty string or an array of non-empty strings/u,
+                );
+            },
+        );
+
+        describe
+        (
+            'Alternate config files',
+            () =>
+            {
+                it
+                (
+                    'should find eslint.config.mjs when present',
+                    async () =>
+                    {
+                        const cwd = getFixturePath('mjs-config');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                configLookup: true,
+                            },
+                        );
+                        const results = await eslint.lintParallel('foo.js');
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].messages.length, 1);
+                        assert.strictEqual(results[0].messages[0].severity, 2);
+                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should find eslint.config.cjs when present',
+                    async () =>
+                    {
+                        const cwd = getFixturePath('cjs-config');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                configLookup: true,
+                            },
+                        );
+                        const results = await eslint.lintParallel('foo.js');
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].messages.length, 1);
+                        assert.strictEqual(results[0].messages[0].severity, 1);
+                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should favor eslint.config.js when eslint.config.mjs and eslint.config.cjs ' +
+                    'are present',
+                    async () =>
+                    {
+                        const cwd = getFixturePath('js-mjs-cjs-config');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                configLookup: true,
+                            },
+                        );
+                        const results = await eslint.lintParallel('foo.js');
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].messages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should favor eslint.config.mjs when eslint.config.cjs is present',
+                    async () =>
+                    {
+                        const cwd = getFixturePath('mjs-cjs-config');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                configLookup: true,
+                            },
+                        );
+                        const results = await eslint.lintParallel('foo.js');
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].messages.length, 1);
+                        assert.strictEqual(results[0].messages[0].severity, 2);
+                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                    },
                 );
             },
         );
@@ -4901,7 +4989,7 @@ describe
                     async () =>
                     {
                         eslint =
-                        await FlatESLint.fromCLIOptions
+                        await ESLint.fromCLIOptions
                         (
                             {
                                 cwd:        join(fixtureDir, '..'),
@@ -4926,7 +5014,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:        join(fixtureDir, '..'),
@@ -4947,7 +5035,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:        join(fixtureDir, '..'),
@@ -4970,7 +5058,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:        join(fixtureDir, '..'),
@@ -4995,7 +5083,7 @@ describe
             async () =>
             {
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:        join(fixtureDir, '..'),
@@ -5063,7 +5151,7 @@ describe
                 await teardown.prepare();
                 ({ cleanup } = teardown);
                 eslint =
-                await FlatESLint.fromCLIOptions
+                await ESLint.fromCLIOptions
                 (
                     {
                         cwd:            teardown.getPath(),

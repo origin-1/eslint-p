@@ -1,13 +1,13 @@
-import patchFlatESLint  from '../../lib/patch-flat-eslint.js';
-import fs               from 'fs';
-import sinon            from 'sinon';
+import patchESLint  from '../../lib/patch-eslint.js';
+import fs           from 'fs';
+import sinon        from 'sinon';
 
 const spy = sinon.spy(fs.promises, 'readFile');
 
-export default async function (FlatESLint, eslintDirURL)
+export default async function (ESLint, eslintDirURL)
 {
-    await patchFlatESLint(FlatESLint, eslintDirURL);
-    const { prototype } = FlatESLint;
+    await patchESLint(ESLint, eslintDirURL);
+    const { prototype } = ESLint;
     const { createLintSingleFile } = prototype;
     prototype.createLintSingleFile =
     async function ()

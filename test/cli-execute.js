@@ -24,12 +24,12 @@ function getFixturePath(...args)
     return filepath;
 }
 
-const [{ FlatESLint }, { default: log }, { default: RuntimeInfo }, execute] =
+const [{ ESLint }, { default: log }, { default: RuntimeInfo }, execute] =
 await Promise.all
 (
     [
-        import(`${eslintDirURL}/lib/eslint/flat-eslint.js`),
-        import(`${eslintDirURL}/lib/shared/logging.js`),
+        import(`${eslintDirURL}lib/eslint/eslint.js`),
+        import(`${eslintDirURL}lib/shared/logging.js`),
         import(`${eslintDirURL}lib/shared/runtime-info.js`),
         createCLIExecute(eslintDirURL),
     ],
@@ -197,14 +197,15 @@ describe
             'Formatters',
             () =>
             {
+                const flag = '--no-config-lookup';
+
                 it
                 (
                     'when given a valid built-in formatter name should execute without any errors',
                     async () =>
                     {
                         const filePath = getFixturePath('passing.js');
-                        const flag = '--no-config-lookup';
-                        const exit = await execute(`${flag} -f checkstyle ${filePath}`);
+                        const exit = await execute(`${flag} -f json ${filePath}`);
 
                         assert.strictEqual(exit, 0);
                     },
@@ -229,7 +230,6 @@ describe
                             async () =>
                             {
                                 const filePath = getFixturePath('passing.js');
-                                const flag = '--no-config-lookup';
                                 const exit =
                                 await execute
                                 (`--no-ignore -f json-with-metadata ${filePath} ${flag}`);
@@ -259,8 +259,6 @@ describe
                 (
                     'when the --max-warnings option is passed', () =>
                     {
-                        const flag = '--no-config-lookup';
-
                         it
                         (
                             'and there are too many warnings should provide ' +
@@ -311,28 +309,58 @@ describe
                     },
                 );
 
-                it
+                describe
                 (
-                    'when given an invalid built-in formatter name should execute with error',
-                    async () =>
+                    'when given an invalid built-in formatter name',
+                    () =>
                     {
-                        const filePath = getFixturePath('passing.js');
-                        const exit = await execute(`-f fakeformatter ${filePath}`);
+                        const cwd = process.cwd();
 
-                        assert.strictEqual(exit, 2);
+                        beforeEach
+                        (() => { process.chdir(getFixturePath()); });
+
+                        afterEach
+                        (() => { process.chdir(cwd); });
+
+                        it
+                        (
+                            'should execute with error',
+                            async () =>
+                            {
+                                const filePath = getFixturePath('passing.js');
+                                const exit = await execute(`-f fakeformatter ${filePath}`);
+
+                                assert.strictEqual(exit, 2);
+                            },
+                        );
                     },
                 );
 
-                it
+                describe
                 (
-                    'when given a valid formatter path should execute without any errors',
-                    async () =>
+                    'when given a valid formatter path',
+                    () =>
                     {
-                        const formatterPath = getFixturePath('formatters', 'simple.js');
-                        const filePath = getFixturePath('passing.js');
-                        const exit = await execute(`-f ${formatterPath} ${filePath}`);
+                        const cwd = process.cwd();
 
-                        assert.strictEqual(exit, 0);
+                        beforeEach
+                        (() => { process.chdir(getFixturePath()); });
+
+                        afterEach
+                        (() => { process.chdir(cwd); });
+
+                        it
+                        (
+                            'should execute without any errors',
+                            async () =>
+                            {
+                                const formatterPath = getFixturePath('formatters', 'simple.js');
+                                const filePath = getFixturePath('passing.js');
+                                const exit = await execute(`-f ${formatterPath} ${filePath}`);
+
+                                assert.strictEqual(exit, 0);
+                            },
+                        );
                     },
                 );
 
@@ -366,17 +394,33 @@ describe
                     },
                 );
 
-                it
+                describe
                 (
-                    'when given an async formatter path should execute without any errors',
-                    async () =>
+                    'when given an async formatter path',
+                    () =>
                     {
-                        const formatterPath = getFixturePath('formatters', 'async.js');
-                        const filePath = getFixturePath('passing.js');
-                        const exit = await execute(`-f ${formatterPath} ${filePath}`);
+                        const cwd = process.cwd();
 
-                        assert.strictEqual(log.info.getCall(0).args[0], 'from async formatter');
-                        assert.strictEqual(exit, 0);
+                        beforeEach
+                        (() => { process.chdir(getFixturePath()); });
+
+                        afterEach
+                        (() => { process.chdir(cwd); });
+
+                        it
+                        (
+                            'should execute without any errors',
+                            async () =>
+                            {
+                                const formatterPath = getFixturePath('formatters', 'async.js');
+                                const filePath = getFixturePath('passing.js');
+                                const exit = await execute(`-f ${formatterPath} ${filePath}`);
+
+                                assert.strictEqual
+                                (log.info.getCall(0).args[0], 'from async formatter');
+                                assert.strictEqual(exit, 0);
+                            },
+                        );
                     },
                 );
             },
@@ -659,16 +703,15 @@ describe
                             {
                                 const filePath = getFixturePath('single-quoted.js');
                                 const cliArgs =
-                                '--no-ignore --quiet  -f compact --rule \'quotes: [2, double]\' ' +
-                                `--rule 'no-unused-vars: 1' ${filePath}`;
+                                '--no-ignore --quiet -f stylish --rule \'quotes: [2, double]\' ' +
+                                `--rule 'no-undef: 1' ${filePath}`;
                                 await execute(cliArgs);
 
                                 assert(log.info.calledOnce);
 
                                 const [formattedOutput] = log.info.firstCall.args;
 
-                                assert(formattedOutput.includes('Error'));
-                                assert(!formattedOutput.includes('Warning'));
+                                assert(formattedOutput.includes('(1 error, 0 warnings)'));
                             },
                         );
 
@@ -679,11 +722,39 @@ describe
                             {
                                 const filePath = getFixturePath('single-quoted.js');
                                 const cliArgs =
-                                '--quiet  -f compact --rule \'quotes: [1, double]\' --rule ' +
-                                `'no-unused-vars: 1' ${filePath}`;
+                                '--no-ignore --quiet -f stylish --rule \'quotes: [1, double]\' ' +
+                                `--rule 'no-undef: 1' ${filePath}`;
                                 await execute(cliArgs);
 
                                 assert(log.info.notCalled);
+                            },
+                        );
+
+                        it
+                        (
+                            'should not run rules set to \'warn\'',
+                            async () =>
+                            {
+                                const filePath = getFixturePath('single-quoted.js');
+                                const configPath = getFixturePath('eslint.config-rule-throws.js');
+                                const cliArgs = `--quiet --config ${configPath}' ${filePath}`;
+                                const exit = await execute(cliArgs);
+
+                                assert.strictEqual(exit, 0);
+                            },
+                        );
+
+                        it
+                        (
+                            'should run rules set to \'warn\' while maxWarnings is set',
+                            async () =>
+                            {
+                                const filePath = getFixturePath('single-quoted.js');
+                                const configPath = getFixturePath('eslint.config-rule-throws.js');
+                                const cliArgs =
+                                `--quiet --max-warnings=1 --config ${configPath}' ${filePath}`;
+                                await assert.rejects
+                                (async () => { await execute(cliArgs); });
                             },
                         );
                     },
@@ -1043,7 +1114,7 @@ describe
                             async () =>
                             {
                                 const options =
-                                `--config ${getFixturePath('eslint.config_with_ignores.js')}`;
+                                `--config ${getFixturePath('eslint.config-with-ignores.js')}`;
                                 const filePath = getFixturePath('cli');
                                 const expectedMessage =
                                 `All files matched by '${filePath.replace(/\\/gu, '/')}' are ` +
@@ -1068,7 +1139,7 @@ describe
                                     {
                                         const options =
                                         `--config ${
-                                        getFixturePath('eslint.config_with_ignores.js')}`;
+                                        getFixturePath('eslint.config-with-ignores.js')}`;
                                         const filePath = getFixturePath('passing.js');
                                         const exit = await execute(`${options} ${filePath}`);
 
@@ -1085,7 +1156,7 @@ describe
                                     {
                                         const options =
                                         `--config ${
-                                        getFixturePath('eslint.config_with_ignores.js')}`;
+                                        getFixturePath('eslint.config-with-ignores.js')}`;
                                         const filePath = getFixturePath('passing.js');
                                         const exit =
                                         await execute(`${options} --no-ignore ${filePath}`);
@@ -1103,10 +1174,23 @@ describe
                                     {
                                         const options =
                                         `--config ${
-                                        getFixturePath('eslint.config_with_ignores.js')}`;
+                                        getFixturePath('eslint.config-with-ignores.js')}`;
                                         const filePath = getFixturePath('passing.js');
                                         const exit =
                                         await execute(`${options} --no-warn-ignored ${filePath}`);
+
+                                        assert(!log.info.called);
+                                        assert.strictEqual(exit, 0);
+                                    },
+                                );
+
+                                it
+                                (
+                                    'should not lint anything when no files are passed if ' +
+                                    '--pass-on-no-patterns is passed',
+                                    async () =>
+                                    {
+                                        const exit = await execute('--pass-on-no-patterns');
 
                                         assert(!log.info.called);
                                         assert.strictEqual(exit, 0);
@@ -1121,7 +1205,7 @@ describe
                                     {
                                         const options =
                                         `--config ${
-                                        getFixturePath('eslint.config_with_ignores.js')}`;
+                                        getFixturePath('eslint.config-with-ignores.js')}`;
                                         const filePath = getFixturePath('passing.js');
                                         const exit =
                                         await execute
@@ -1361,11 +1445,11 @@ describe
                     async () =>
                     {
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ inlineConfig: false }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns
                         (
                             [
                                 {
@@ -1384,9 +1468,9 @@ describe
                             ],
                         );
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.stub(FlatESLint, 'outputFixes');
+                        sinon.stub(ESLint, 'outputFixes');
 
                         await execute('--no-inline-config .');
                     },
@@ -1398,15 +1482,15 @@ describe
                     async () =>
                     {
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ inlineConfig: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.stub(FlatESLint, 'outputFixes');
+                        sinon.stub(ESLint, 'outputFixes');
                         const exitCode = await execute('.');
 
                         assert.strictEqual(exitCode, 0);
@@ -1429,15 +1513,15 @@ describe
                     async () =>
                     {
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fix: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.stub(FlatESLint, 'outputFixes');
+                        sinon.stub(ESLint, 'outputFixes');
                         const exitCode = await execute('--fix .');
 
                         assert.strictEqual(exitCode, 0);
@@ -1466,15 +1550,15 @@ describe
                             },
                         ];
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fix: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.mock(FlatESLint).expects('outputFixes').withExactArgs(report);
+                        sinon.mock(ESLint).expects('outputFixes').withExactArgs(report);
                         const exitCode = await execute('--fix .');
 
                         assert.strictEqual(exitCode, 1);
@@ -1504,16 +1588,16 @@ describe
                             },
                         ];
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fix: true, quiet: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.stub(FlatESLint, 'getErrorResults').returns([]);
-                        sinon.mock(FlatESLint).expects('outputFixes').withExactArgs(report);
+                        sinon.stub(ESLint, 'getErrorResults').returns([]);
+                        sinon.mock(ESLint).expects('outputFixes').withExactArgs(report);
                         const exitCode = await execute('--fix --quiet .');
 
                         assert.strictEqual(exitCode, 0);
@@ -1526,7 +1610,7 @@ describe
                     async () =>
                     {
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .never()
                         .callThrough();
@@ -1552,15 +1636,15 @@ describe
                     async () =>
                     {
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.mock(FlatESLint).expects('outputFixes').never();
+                        sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run .');
 
                         assert.strictEqual(exitCode, 0);
@@ -1578,15 +1662,15 @@ describe
                             fixType:    ['suggestion'],
                         };
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match(expectedESLintOptions))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.stub(FlatESLint, 'outputFixes');
+                        sinon.stub(ESLint, 'outputFixes');
                         const exitCode = await execute('--fix-dry-run --fix-type suggestion .');
 
                         assert.strictEqual(exitCode, 0);
@@ -1615,15 +1699,15 @@ describe
                             },
                         ];
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.mock(FlatESLint).expects('outputFixes').never();
+                        sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run .');
 
                         assert.strictEqual(exitCode, 1);
@@ -1652,16 +1736,16 @@ describe
                             },
                         ];
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true, quiet: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.stub(FlatESLint, 'getErrorResults').returns([]);
-                        sinon.mock(FlatESLint).expects('outputFixes').never();
+                        sinon.stub(ESLint, 'getErrorResults').returns([]);
+                        sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run --quiet .');
 
                         assert.strictEqual(exitCode, 0);
@@ -1690,15 +1774,15 @@ describe
                             },
                         ];
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true }))
                         .callThrough();
-                        sinon.stub(FlatESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
                         sinon
-                        .stub(FlatESLint.prototype, 'loadFormatter')
+                        .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
-                        sinon.mock(FlatESLint).expects('outputFixes').never();
+                        sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run .', 'foo = bar;');
 
                         assert.strictEqual(exitCode, 1);
@@ -1711,7 +1795,7 @@ describe
                     async () =>
                     {
                         sinon
-                        .mock(FlatESLint)
+                        .mock(ESLint)
                         .expects('fromCLIOptions')
                         .never()
                         .callThrough();

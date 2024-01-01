@@ -9,7 +9,7 @@ export default async function createVerifyText(eslintDirURL)
 {
     const importAsESLint = await createImportAs(eslintDirURL);
     const { default: createDebug } = await importAsESLint('debug');
-    const debug = createDebug('eslint:flat-eslint');
+    const debug = createDebug('eslint:eslint');
 
     /* global verifyText -- make-grab */
 

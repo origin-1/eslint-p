@@ -6,7 +6,7 @@ import path                 from 'node:path';
 import { pathToFileURL }    from 'node:url';
 import createImportAs       from '../lib/create-import-as.js';
 
-const FLAT_CONFIG_FILENAME = 'eslint.config.js';
+/* global FLAT_CONFIG_FILENAMES -- make-grab */
 
 const require = createRequire(import.meta.url);
 
@@ -22,7 +22,7 @@ export default async function createCalculateConfigArray(eslintDirURL, privateMe
             importAsESLint('find-up'),
         ],
     );
-    const debug = createDebug('eslint:flat-eslint');
+    const debug = createDebug('eslint:eslint');
     const importedConfigFileModificationTime = new Map();
 
     /* global findFlatConfigFile -- make-grab */
