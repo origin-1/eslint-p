@@ -1,5 +1,5 @@
-import { createFlatConfig } from '@origin-1/eslint-config';
-import globals              from 'globals';
+import { createConfig } from '@origin-1/eslint-config';
+import globals          from 'globals';
 
 const nodeESMGlobals =
 {
@@ -11,7 +11,7 @@ const nodeESMGlobals =
     require:    'off',
 };
 
-export default createFlatConfig
+export default createConfig
 (
     { ignores: ['coverage', 'grab', 'test/fixtures'] },
     {

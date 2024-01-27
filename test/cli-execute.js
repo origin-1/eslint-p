@@ -2,14 +2,13 @@
 
 import assert           from 'node:assert/strict';
 
-import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync }
+import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync }
 from 'node:fs';
 
 import { tmpdir }       from 'node:os';
 import { join }         from 'node:path';
 import createCLIExecute from '../lib/create-cli-execute.js';
 import eslintDirURL     from '../lib/default-eslint-dir-url.js';
-import shell            from 'shelljs';
 import sinon            from 'sinon';
 
 /**
@@ -53,13 +52,13 @@ describe
                  * Mocha uses `this` to set timeouts on an individual hook level.
                  */
                 this.timeout(60 * 1000);
-                shell.mkdir('-p', fixtureDir);
-                shell.cp('-r', './test/fixtures/.', fixtureDir);
+                mkdirSync(fixtureDir, { recursive: true });
+                cpSync('./test/fixtures/.', fixtureDir, { recursive: true });
             },
         );
 
         after
-        (() => { shell.rm('-r', fixtureDir); });
+        (() => { rmSync(fixtureDir, { recursive: true }); });
 
         beforeEach
         (
@@ -1391,6 +1390,25 @@ describe
 
                         assert
                         (readFileSync(`${outDir}/eslint-output.txt`, 'utf8').includes(filePath));
+                        assert(log.info.notCalled);
+                    },
+                );
+
+                // https://github.com/eslint/eslint/issues/17660
+                it
+                (
+                    'should write the file and create dirs if they don\'t exist even when output ' +
+                    'is empty',
+                    async () =>
+                    {
+                        const filePath = getFixturePath('single-quoted.js');
+                        const code =
+                        `${flag} --rule 'quotes: [1, single]' --o ${outDir}/eslint-output.txt ${
+                        filePath}`;
+                        await execute(code, 'var a = \'b\'');
+
+                        assert(existsSync(`${outDir}/eslint-output.txt`));
+                        assert.strictEqual(readFileSync(`${outDir}/eslint-output.txt`, 'utf8'), '');
                         assert(log.info.notCalled);
                     },
                 );

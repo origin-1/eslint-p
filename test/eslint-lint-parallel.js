@@ -1697,6 +1697,186 @@ describe
                         );
                     },
                 );
+
+                // https://github.com/eslint/eslint/issues/17964#issuecomment-1879840650
+                it
+                (
+                    'should allow directories to be unignored without also unignoring all files ' +
+                    'in them',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd: getFixturePath('ignores-directory-deep'),
+                                overrideConfig:
+                                {
+                                    ignores:
+                                    [
+                                        // ignore all files and directories
+                                        'tests/format/**/*',
+                                        // unignore all directories
+                                        '!tests/format/**/*/',
+                                        // unignore only specific files
+                                        '!tests/format/**/jsfmt.spec.js',
+                                    ],
+                                },
+                            },
+                        );
+                        const results = await eslint.lintParallel(['.']);
+
+                        assert.strictEqual(results.length, 2);
+                        assert.strictEqual(results[0].errorCount, 0);
+                        assert.strictEqual(results[0].warningCount, 0);
+                        assert.strictEqual
+                        (
+                            results[0].filePath,
+                            getFixturePath('ignores-directory-deep/tests/format/jsfmt.spec.js'),
+                        );
+                        assert.strictEqual(results[1].errorCount, 0);
+                        assert.strictEqual(results[1].warningCount, 0);
+                        assert.strictEqual
+                        (
+                            results[1].filePath,
+                            getFixturePath
+                            ('ignores-directory-deep/tests/format/subdir/jsfmt.spec.js'),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should allow only subdirectories to be ignored by a pattern ending with \'/\'',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            getFixturePath('ignores-directory-deep'),
+                                overrideConfig: { ignores: ['tests/format/*/'] },
+                            },
+                        );
+                        const results = await eslint.lintParallel(['.']);
+
+                        assert.strictEqual(results.length, 2);
+                        assert.strictEqual(results[0].errorCount, 0);
+                        assert.strictEqual(results[0].warningCount, 0);
+                        assert.strictEqual
+                        (
+                            results[0].filePath,
+                            getFixturePath('ignores-directory-deep/tests/format/foo.js'),
+                        );
+                        assert.strictEqual(results[1].errorCount, 0);
+                        assert.strictEqual(results[1].warningCount, 0);
+                        assert.strictEqual
+                        (
+                            results[1].filePath,
+                            getFixturePath('ignores-directory-deep/tests/format/jsfmt.spec.js'),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should allow only contents of a directory but not the directory itself to ' +
+                    'be ignored by a pattern ending with \'**/*\'',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd: getFixturePath('ignores-directory-deep'),
+                                overrideConfig:
+                                {
+                                    ignores:
+                                    [
+                                        'tests/format/**/*',
+                                        '!tests/format/jsfmt.spec.js',
+                                    ],
+                                },
+                            },
+                        );
+                        const results = await eslint.lintParallel(['.']);
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].errorCount, 0);
+                        assert.strictEqual(results[0].warningCount, 0);
+                        assert.strictEqual
+                        (
+                            results[0].filePath,
+                            getFixturePath('ignores-directory-deep/tests/format/jsfmt.spec.js'),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should skip ignored files in an unignored directory',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd: getFixturePath('ignores-directory-deep'),
+                                overrideConfig:
+                                {
+                                    ignores:
+                                    [
+                                        // ignore 'tests/format/' and all its contents
+                                        'tests/format/**',
+                                        // unignore 'tests/format/', but its contents is still
+                                        // ignored
+                                        '!tests/format/',
+                                    ],
+                                },
+                            },
+                        );
+                        await assert.rejects
+                        (
+                            async () => { await eslint.lintParallel(['.']); },
+                            /All files matched by '.' are ignored/u,
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should skip files in an ignored directory even if they are matched by a ' +
+                    'negated pattern',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd: getFixturePath('ignores-directory-deep'),
+                                overrideConfig:
+                                {
+                                    ignores:
+                                    [
+                                        // ignore 'tests/format/' and all its contents
+                                        'tests/format/**',
+                                        // this patterns match some or all of its contents, but
+                                        // 'tests/format/' is still ignored
+                                        '!tests/format/jsfmt.spec.js',
+                                        '!tests/format/**/jsfmt.spec.js',
+                                        '!tests/format/*',
+                                        '!tests/format/**/*',
+                                    ],
+                                },
+                            },
+                        );
+                        await assert.rejects
+                        (
+                            async () => { await eslint.lintFiles(['.']); },
+                            /All files matched by '.' are ignored/u,
+                        );
+                    },
+                );
             },
         );
 

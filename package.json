@@ -23,12 +23,12 @@
     "test": "mocha test/*.js"
   },
   "dependencies": {
-    "eslint": "9.0.0-alpha.0"
+    "eslint": "9.0.0-alpha.2"
   },
   "devDependencies": {
-    "@origin-1/eslint-config": "^0.20.0",
+    "@origin-1/eslint-config": "^0.21.0",
     "acorn": "^8.11.3",
-    "c8js": "^0.6.0",
+    "c8js": "^0.6.1",
     "esprima": "^4.0.1",
     "file-entry-cache": "^8.0.0",
     "fs-teardown": "^0.3.2",
