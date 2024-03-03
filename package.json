@@ -17,28 +17,28 @@
     "build-no-install": "npm run clean && npm run make-grabs && npm run lint && npm run coverage",
     "clean": "node dev/clean.js",
     "coverage": "node dev/coverage.js",
-    "lint": "node ./lib/eslint-p.js .",
-    "lint:fix": "node ./lib/eslint-p.js . --fix",
+    "lint": "node ./lib/eslint-p.js",
+    "lint:fix": "node ./lib/eslint-p.js --fix",
     "make-grabs": "node ./dev/make-grabs.js",
     "test": "mocha test/*.js"
   },
   "dependencies": {
-    "eslint": "9.0.0-alpha.2"
+    "eslint": "9.0.0-beta.1"
   },
   "devDependencies": {
-    "@origin-1/eslint-config": "^0.21.0",
+    "@origin-1/eslint-config": "^0.22.1",
     "acorn": "^8.11.3",
-    "c8js": "^0.6.1",
+    "c8js": "^0.6.2",
     "esprima": "^4.0.1",
     "file-entry-cache": "^8.0.0",
     "fs-teardown": "^0.3.2",
-    "globals": "^13.24.0",
+    "globals": "^14.0.0",
     "imurmurhash": "^0.1.4",
-    "mocha": "^10.2.0",
+    "mocha": "^10.3.0",
     "sinon": "^17.0.1"
   },
   "engines": {
-    "node": ">=17"
+    "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
   },
   "imports": {
     "#patch-eslint-with-cache-test": "./test/_utils/patch-eslint-with-cache-test.js"

@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* eslint no-unused-vars: "off" */
 
 import path             from 'node:path';
 import createImportAs   from '../lib/create-import-as.js';

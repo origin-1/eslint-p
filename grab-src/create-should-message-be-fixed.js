@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* eslint no-unused-vars: "off" */
 
 export default async function createShouldMessageBeFixed(eslintDirURL)
 {

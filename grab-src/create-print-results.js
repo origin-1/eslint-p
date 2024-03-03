@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* eslint no-unused-vars: "off" */
 
 import { mkdir, stat, writeFile }   from 'node:fs/promises';
 import path                         from 'node:path';

@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* eslint no-unused-vars: "off" */
 
 import fs                   from 'node:fs/promises';
 import { createRequire }    from 'node:module';

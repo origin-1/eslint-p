@@ -1,8 +1,8 @@
 # eslint-p
 
-A drop-in replacement for ESLint for multithreaded parallel linting.
+A drop-in replacement for ESLint 9 featuring multithreaded parallel linting.
 
-**Only flat config is supported!** **Node.js >= 17 is required.**
+**Only flat config is supported!**
 
 ## Usage
 
@@ -11,5 +11,5 @@ All ESLint options are supported, plus `--concurrency`.
 Example:
 
 ```shell
-npx eslint-p . --fix --concurrency=4
+npx eslint-p --fix --concurrency=4
 ```
