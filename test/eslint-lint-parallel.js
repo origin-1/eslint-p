@@ -7,7 +7,9 @@ from 'node:fs/promises';
 
 import { platform, tmpdir }                             from 'node:os';
 import { basename, dirname, join, relative, resolve }   from 'node:path';
+import { setImmediate }                                 from 'node:timers/promises';
 import { fileURLToPath }                                from 'node:url';
+import { setEnvironmentData }                           from 'node:worker_threads';
 import eslintDirURL                                     from '../lib/default-eslint-dir-url.js';
 import patchESLint                                      from '../lib/patch-eslint.js';
 import { createCustomTeardown, unIndent }               from './_utils/index.js';
@@ -5155,6 +5157,75 @@ describe
 
 describe
 (
+    'lintParallel()',
+    () =>
+    {
+        let createCallCountArray;
+
+        before(setUpFixtures);
+
+        after(tearDownFixtures);
+
+        beforeEach
+        (
+            () =>
+            {
+                createCallCountArray =
+                new Uint32Array(new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT));
+                setEnvironmentData('create-call-count-array', createCallCountArray);
+            },
+        );
+
+        afterEach
+        (
+            () =>
+            {
+                createCallCountArray = undefined;
+                setEnvironmentData('create-call-count-array', undefined);
+            },
+        );
+
+        it
+        (
+            'should stop linting files if a rule crashes',
+            async () =>
+            {
+                const cwd = getFixturePath('autofix');
+                const concurrency = 2;
+                const eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        concurrency,
+                        cwd,
+                        plugin:                     ['boom'],
+                        resolvePluginsRelativeTo:   getFixturePath('plugins'),
+                        rule:                       { 'boom/boom': 'error' },
+                    },
+                );
+                await assert.rejects
+                (
+                    eslint.lintParallel('*.js'),
+                    ({ message }) =>
+                    message.startsWith('Error while loading rule \'boom/boom\': Boom!\n'),
+                );
+                // Wait until all worker threads have terminated.
+                while (process.getActiveResourcesInfo().includes('MessagePort'))
+                    await setImmediate();
+                const [createCallCount] = createCallCountArray;
+                assert
+                (
+                    createCallCount <= concurrency,
+                    `Expected no more calls that there are worker threads but got ${
+                    createCallCount}`,
+                );
+            },
+        );
+    },
+);
+
+describe
+(
     'Fix Types',
     () =>
     {
@@ -5284,67 +5355,6 @@ describe
                 const expectedOutput = await readFile(outputPath, 'utf8');
 
                 assert.strictEqual(results[0].output, expectedOutput);
-            },
-        );
-    },
-);
-
-describe
-(
-    'lintParallel worker therad',
-    () =>
-    {
-        let eslint;
-
-        const root = getFixturePath('bad-config');
-
-        let cleanup;
-
-        beforeEach
-        (
-            () =>
-            {
-                cleanup = () => { };
-            },
-        );
-
-        afterEach(() => cleanup());
-
-        it
-        (
-            'should emit an error',
-            async () =>
-            {
-                const teardown =
-                createCustomTeardown
-                (
-                    {
-                        cwd: root,
-                        files:
-                        {
-                            'test.js': '',
-                            'eslint.config.js':
-                            `
-                            const { isMainThread } = require('node:worker_threads');
-
-                            if (!isMainThread)
-                                throw Error('foobar');
-                            `,
-                        },
-                    },
-                );
-                await teardown.prepare();
-                ({ cleanup } = teardown);
-                eslint =
-                await ESLint.fromCLIOptions
-                (
-                    {
-                        cwd:            teardown.getPath(),
-                        configLookup:   true,
-                    },
-                );
-                await assert.rejects
-                (async () => await eslint.lintParallel(['test.js']), { message: 'foobar' });
             },
         );
     },

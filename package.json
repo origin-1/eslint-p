@@ -23,7 +23,7 @@
     "test": "mocha test/*.js"
   },
   "dependencies": {
-    "eslint": "9.0.0-beta.1"
+    "eslint": "9.0.0-beta.2"
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^0.22.1",
