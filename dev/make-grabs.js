@@ -15,6 +15,7 @@ import { parse }                        from 'acorn';
             `${eslintDirURL}lib/cli.js`,
             [
                 'count-errors.js',
+                'create-load-plugins.js',
                 'create-print-results.js',
                 'quiet-fix-predicate.js',
                 'quiet-rule-filter.js',

@@ -26,9 +26,6 @@ async function getESLint()
 
 const ESLint = await getESLint();
 
-const examplePluginName = 'eslint-plugin-example';
-const examplePluginNameWithNamespace = '@eslint/eslint-plugin-example';
-const examplePreprocessorName = 'eslint-plugin-processor';
 const fixtureDir = join(await realpath(tmpdir()), 'eslint/fixtures');
 const originalDir = process.cwd();
 
@@ -53,9 +50,9 @@ async function eslintWithPlugins(options)
             ...options,
             plugin:
             [
-                examplePluginName,
-                examplePluginNameWithNamespace,
-                examplePreprocessorName,
+                'eslint-plugin-example',
+                '@eslint/eslint-plugin-example',
+                'eslint-plugin-processor',
             ],
             resolvePluginsRelativeTo: getFixturePath('plugins'),
         },
