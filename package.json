@@ -21,6 +21,7 @@
     "lint": "node ./lib/eslint-p.js",
     "lint:fix": "node ./lib/eslint-p.js --fix",
     "make-grabs": "node ./dev/make-grabs.js",
+    "release": "npm version -m \"release %s\"",
     "test": "mocha test/*.js"
   },
   "dependencies": {
