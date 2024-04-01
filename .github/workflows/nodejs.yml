@@ -1,0 +1,51 @@
+name: Node.js CI
+
+on: [push, pull_request]
+
+jobs:
+
+  lint:
+
+    name: Lint
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ^20.8
+    - run: |
+        npm install --force
+        npm run make-grabs
+        npm run lint
+
+  test:
+
+    name: Test (Node.js ${{ matrix.node-version }} on ${{ matrix.runs-on }})
+
+    runs-on: ${{ matrix.runs-on }}
+
+    strategy:
+
+      matrix:
+
+        runs-on: [ubuntu-latest]
+
+        node-version: [21.x, 20.x, 18.x, '18.18.0']
+
+        include:
+          - runs-on: windows-latest
+            node-version: lts/*
+          - runs-on: macOS-latest
+            node-version: lts/*
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: |
+        npm install --force
+        npm run make-grabs
+        npm test

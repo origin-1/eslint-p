@@ -3640,7 +3640,7 @@ describe
                                 );
 
                                 // this should result in a changed entry
-                                const now = Date.now();
+                                const now = new Date();
                                 await utimes(goodFile, now, now);
                                 fileCache = fCache.createFromFile(cacheFilePath);
 
@@ -3708,7 +3708,7 @@ describe
                                 );
 
                                 // this should NOT result in a changed entry
-                                const now = Date.now();
+                                const now = new Date();
                                 await utimes(goodFile, now, now);
                                 fileCache = fCache.createFromFile(cacheFilePath, true);
                                 entries = fileCache.normalizeEntries([badFile, goodFile]);
