@@ -5357,6 +5357,8 @@ describe
     },
 );
 
+// Custom tests
+
 describe
 (
     'Fix types when \'quiet\' option is true',

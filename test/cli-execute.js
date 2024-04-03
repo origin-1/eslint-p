@@ -77,7 +77,7 @@ describe
             async () =>
             {
                 sinon.define(process.env, 'ESLINT_USE_FLAT_CONFIG', 'false');
-                const exitCode = await execute([]);
+                const exitCode = await execute('');
 
                 assert.equal(log.error.callCount, 1);
                 assert.equal(exitCode, 2);
