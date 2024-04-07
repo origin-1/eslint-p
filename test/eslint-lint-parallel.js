@@ -5149,73 +5149,69 @@ describe
                 );
             },
         );
-    },
-);
-
-describe
-(
-    'lintParallel()',
-    () =>
-    {
-        let createCallCountArray;
-
-        before(setUpFixtures);
-
-        after(tearDownFixtures);
-
-        beforeEach
-        (
-            () =>
-            {
-                createCallCountArray =
-                new Uint32Array(new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT));
-                setEnvironmentData('create-call-count-array', createCallCountArray);
-            },
-        );
-
-        afterEach
-        (
-            () =>
-            {
-                createCallCountArray = undefined;
-                setEnvironmentData('create-call-count-array', undefined);
-            },
-        );
 
         it
         (
             'should stop linting files if a rule crashes',
             async () =>
             {
-                const cwd = getFixturePath('autofix');
-                const concurrency = 2;
-                const eslint =
-                await ESLint.fromCLIOptions
-                (
-                    {
-                        concurrency,
-                        cwd,
-                        plugin:                     ['boom'],
-                        resolvePluginsRelativeTo:   getFixturePath('plugins'),
-                        rule:                       { 'boom/boom': 'error' },
-                    },
-                );
-                await assert.rejects
-                (
-                    eslint.lintParallel('*.js'),
-                    ({ message }) =>
-                    message.startsWith('Error while loading rule \'boom/boom\': Boom!\n'),
-                );
-                // Wait until all worker threads have terminated.
-                while (process.getActiveResourcesInfo().includes('MessagePort'))
-                    await setImmediate();
-                const [createCallCount] = createCallCountArray;
-                assert
-                (
-                    createCallCount <= concurrency,
-                    `Expected no more calls that there are worker threads but got ${
-                    createCallCount}`,
-                );
+                let createCallCountArray;
+
+                function doBefore()
+                {
+                    createCallCountArray =
+                    new Uint32Array(new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT));
+                    setEnvironmentData('create-call-count-array', createCallCountArray);
+                }
+
+                function doAfter()
+                {
+                    createCallCountArray = undefined;
+                    setEnvironmentData('create-call-count-array', undefined);
+                }
+
+                async function doTest()
+                {
+                    const cwd = getFixturePath('autofix');
+                    const concurrency = 2;
+                    const eslint =
+                    await ESLint.fromCLIOptions
+                    (
+                        {
+                            concurrency,
+                            cwd,
+                            plugin:                     ['boom'],
+                            resolvePluginsRelativeTo:   getFixturePath('plugins'),
+                            rule:                       { 'boom/boom': 'error' },
+                        },
+                    );
+                    await assert.rejects
+                    (
+                        eslint.lintParallel('*.js'),
+                        ({ message }) =>
+                        message.startsWith('Error while loading rule \'boom/boom\': Boom!\n'),
+                    );
+                    // Wait until all worker threads have terminated.
+                    while (process.getActiveResourcesInfo().includes('MessagePort'))
+                        await setImmediate();
+                    const [createCallCount] = createCallCountArray;
+                    assert
+                    (
+                        createCallCount <= concurrency,
+                        `Expected no more calls that there are worker threads but got ${
+                        createCallCount}`,
+                    );
+                }
+
+                doBefore();
+                try
+                {
+                    await doTest();
+                }
+                finally
+                {
+                    doAfter();
+                }
             },
         );
     },
@@ -5352,6 +5348,84 @@ describe
                 const expectedOutput = await readFile(outputPath, 'utf8');
 
                 assert.strictEqual(results[0].output, expectedOutput);
+            },
+        );
+    },
+);
+
+describe
+(
+    'Use stats option',
+    () =>
+    {
+        before(setUpFixtures);
+
+        after(tearDownFixtures);
+
+        it
+        (
+            'should report stats',
+            async () =>
+            {
+                const engine =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        rule:   { 'no-regex-spaces': 'error' },
+                        cwd:    getFixturePath('stats-example'),
+                        stats:  true,
+                    },
+                );
+                const results = await engine.lintParallel(['file-to-fix.js']);
+
+                assert.strictEqual(results[0].stats.fixPasses, 0);
+                assert.strictEqual(results[0].stats.times.passes.length, 1);
+                assert(Number.isFinite(results[0].stats.times.passes[0].parse.total));
+                assert
+                (Number.isFinite(results[0].stats.times.passes[0].rules['no-regex-spaces'].total));
+                assert(Number.isFinite(results[0].stats.times.passes[0].rules['wrap-regex'].total));
+                assert.strictEqual(results[0].stats.times.passes[0].fix.total, 0);
+                assert(Number.isFinite(results[0].stats.times.passes[0].total));
+            },
+        );
+
+        it
+        (
+            'should report stats with fix',
+            async () =>
+            {
+                const engine =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        rule:   { 'no-regex-spaces': 'error' },
+                        cwd:    getFixturePath('stats-example'),
+                        fix:    true,
+                        stats:  true,
+                    },
+                );
+                const results = await engine.lintParallel(['file-to-fix.js']);
+
+                assert.strictEqual(results[0].stats.fixPasses, 2);
+                assert.strictEqual(results[0].stats.times.passes.length, 3);
+                assert(Number.isFinite(results[0].stats.times.passes[0].parse.total));
+                assert(Number.isFinite(results[0].stats.times.passes[1].parse.total));
+                assert(Number.isFinite(results[0].stats.times.passes[2].parse.total));
+                assert
+                (Number.isFinite(results[0].stats.times.passes[0].rules['no-regex-spaces'].total));
+                assert(Number.isFinite(results[0].stats.times.passes[0].rules['wrap-regex'].total));
+                assert
+                (Number.isFinite(results[0].stats.times.passes[1].rules['no-regex-spaces'].total));
+                assert(Number.isFinite(results[0].stats.times.passes[1].rules['wrap-regex'].total));
+                assert
+                (Number.isFinite(results[0].stats.times.passes[2].rules['no-regex-spaces'].total));
+                assert(Number.isFinite(results[0].stats.times.passes[2].rules['wrap-regex'].total));
+                assert(Number.isFinite(results[0].stats.times.passes[0].fix.total));
+                assert(Number.isFinite(results[0].stats.times.passes[1].fix.total));
+                assert.strictEqual(results[0].stats.times.passes[2].fix.total, 0);
+                assert(Number.isFinite(results[0].stats.times.passes[0].total));
+                assert(Number.isFinite(results[0].stats.times.passes[1].total));
+                assert(Number.isFinite(results[0].stats.times.passes[2].total));
             },
         );
     },
