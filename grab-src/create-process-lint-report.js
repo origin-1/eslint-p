@@ -18,7 +18,7 @@ export default async function createProcessLintReport(eslintDirURL, privateMembe
         ],
     );
 
-    /* global getOrFindUsedDeprecatedRules -- make-grab */
+    /* global getOrFindUsedDeprecatedRules -- make-grab lib/eslint/eslint.js */
 
     /* global processLintReport -- make-grab */
 

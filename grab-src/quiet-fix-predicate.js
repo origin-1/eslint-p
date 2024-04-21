@@ -1,3 +1,3 @@
-/* global quietFixPredicate -- make-grab */
+/* global quietFixPredicate -- make-grab lib/cli.js */
 
 export default quietFixPredicate;

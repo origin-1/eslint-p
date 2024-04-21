@@ -6,7 +6,7 @@ import path                 from 'node:path';
 import { pathToFileURL }    from 'node:url';
 import createImportAs       from '../lib/create-import-as.js';
 
-/* global FLAT_CONFIG_FILENAMES -- make-grab */
+/* global FLAT_CONFIG_FILENAMES -- make-grab lib/eslint/eslint.js */
 
 const require = createRequire(import.meta.url);
 

@@ -1,3 +1,3 @@
-/* global countErrors -- make-grab */
+/* global countErrors -- make-grab lib/cli.js */
 
 export default countErrors;

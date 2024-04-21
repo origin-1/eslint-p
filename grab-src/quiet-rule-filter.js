@@ -1,3 +1,3 @@
-/* global quietRuleFilter -- make-grab */
+/* global quietRuleFilter -- make-grab lib/cli.js */
 
 export default quietRuleFilter;

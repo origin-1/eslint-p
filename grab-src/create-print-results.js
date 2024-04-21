@@ -3,7 +3,7 @@
 import { mkdir, stat, writeFile }   from 'node:fs/promises';
 import path                         from 'node:path';
 
-/* global isDirectory -- make-grab */
+/* global isDirectory -- make-grab lib/cli.js */
 
 export default async function createPrintResults(eslintDirURL)
 {
