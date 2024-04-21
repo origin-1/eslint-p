@@ -30,7 +30,7 @@ await Promise.all
         import(`${eslintDirURL}lib/eslint/eslint.js`),
         import(`${eslintDirURL}lib/shared/logging.js`),
         import(`${eslintDirURL}lib/shared/runtime-info.js`),
-        createCLIExecute(eslintDirURL),
+        createCLIExecute(eslintDirURL, null),
     ],
 );
 const fixtureDir = join(realpathSync(tmpdir()), 'eslint/fixtures');

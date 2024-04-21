@@ -1,10 +1,10 @@
 /* globals describe, it */
 
 import assert                   from 'node:assert/strict';
-import { execFile }             from 'node:child_process';
+import { execFile, fork }       from 'node:child_process';
 import { mkdtemp, writeFile }   from 'node:fs/promises';
 import { tmpdir }               from 'node:os';
-import { join }                 from 'node:path';
+import { dirname, join }        from 'node:path';
 import { fileURLToPath }        from 'node:url';
 import { promisify }            from 'node:util';
 
@@ -32,6 +32,81 @@ describe
                     stdout.endsWith
                     ('--concurrency Int               Number of concurrent threads - default: 1\n'),
                 );
+            },
+        );
+
+        it
+        (
+            'with `--inspect-config` when the command succeeds',
+            async () =>
+            {
+                const eslintPPath = fileURLToPath(new URL('../lib/eslint-p.js', import.meta.url));
+                const loaderSrc =
+                `
+                import childProcess                 from 'node:child_process';
+                import { syncBuiltinESMExports }    from 'node:module';
+
+                childProcess.spawnSync = (...args) => process.send(args);
+                syncBuiltinESMExports();
+                `;
+                const execArgv = ['--import', `data:text/javascript,${encodeURI(loaderSrc)}`];
+                const childProcess =
+                fork
+                (
+                    eslintPPath,
+                    ['--inspect-config'],
+                    { execArgv, silent: true },
+                );
+                let actualMessage;
+                childProcess.once
+                ('message', message => { actualMessage = message; });
+                const exitCode =
+                await new Promise(resolve => { childProcess.once('close', resolve); });
+                assert.equal(exitCode, 0);
+                const pkgPath = dirname(fileURLToPath(new URL('.', import.meta.url)));
+                assert.deepEqual
+                (
+                    actualMessage,
+                    [
+                        'npx',
+                        [
+                            '@eslint/config-inspector',
+                            '--config',
+                            join(pkgPath, 'eslint.config.js'),
+                            '--basePath',
+                            pkgPath,
+                        ],
+                        { stdio: 'inherit' },
+                    ],
+                );
+            },
+        );
+
+        it
+        (
+            'with `--inspect-config` when the command fails',
+            async () =>
+            {
+                const eslintPPath = fileURLToPath(new URL('../lib/eslint-p.js', import.meta.url));
+                const loaderSrc =
+                `
+                import childProcess                 from 'node:child_process';
+                import { syncBuiltinESMExports }    from 'node:module';
+
+                childProcess.spawnSync = childProcess.spawnSync = () => ({ error: Error() });
+                syncBuiltinESMExports();
+                `;
+                const execArgv = ['--import', `data:text/javascript,${encodeURI(loaderSrc)}`];
+                const childProcess =
+                fork
+                (
+                    eslintPPath,
+                    ['--inspect-config'],
+                    { execArgv, silent: true },
+                );
+                const exitCode =
+                await new Promise(resolve => { childProcess.once('close', resolve); });
+                assert.equal(exitCode, 2);
             },
         );
 

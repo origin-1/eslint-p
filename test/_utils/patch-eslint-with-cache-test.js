@@ -1,5 +1,5 @@
+import fs           from 'node:fs';
 import patchESLint  from '../../lib/patch-eslint.js';
-import fs           from 'fs';
 import sinon        from 'sinon';
 
 const spy = sinon.spy(fs.promises, 'readFile');
