@@ -42,6 +42,9 @@
   "engines": {
     "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
   },
+  "exports": {
+    "./package.json": "./package.json"
+  },
   "imports": {
     "#patch-eslint-with-cache-test": "./test/_utils/patch-eslint-with-cache-test.js"
   },
