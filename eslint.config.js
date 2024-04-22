@@ -13,7 +13,7 @@ const nodeESMGlobals =
 
 export default createConfig
 (
-    { ignores: ['coverage', 'grab', 'test/fixtures'] },
+    { ignores: ['coverage', 'eslint-p.js', 'grab', 'test/fixtures'] },
     {
         jsVersion:          2022,
         languageOptions:    { globals: nodeESMGlobals, sourceType: 'module' },
