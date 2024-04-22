@@ -14,7 +14,7 @@
     "url": "git+https://github.com/origin-1/eslint-p.git"
   },
   "scripts": {
-    "build": "npm install --f && npm run build-no-install",
+    "build": "npm install --force && npm run build-no-install",
     "build-no-install": "npm run clean && npm run make-grabs && npm run lint && npm run coverage",
     "clean": "node dev/clean.js",
     "coverage": "node dev/coverage.js",
@@ -25,7 +25,7 @@
     "test": "mocha test/*.js"
   },
   "dependencies": {
-    "eslint": "9.1.0"
+    "eslint": "9.1.1"
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^1.1.0",
@@ -36,7 +36,7 @@
     "fs-teardown": "^0.3.2",
     "globals": "^15.0.0",
     "imurmurhash": "^0.1.4",
-    "mocha": "^10.3.0",
+    "mocha": "^10.4.0",
     "sinon": "^17.0.1"
   },
   "engines": {
