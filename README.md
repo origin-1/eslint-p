@@ -14,5 +14,5 @@ Example:
 npx eslint-p --fix --concurrency=4
 ```
 
-[npm badge]: https://img.shields.io/npm/v/eslint-plogo=npm
+[npm badge]: https://img.shields.io/npm/v/eslint-p?logo=npm
 [npm URL]: https://www.npmjs.com/package/eslint-p
