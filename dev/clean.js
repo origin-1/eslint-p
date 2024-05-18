@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
-import { rm }               from 'node:fs/promises';
-import { join }             from 'node:path';
-import { fileURLToPath }    from 'node:url';
+import { rm } from 'node:fs/promises';
 
-const workspaceFolder = join(fileURLToPath(import.meta.url), '../..');
-process.chdir(workspaceFolder);
-const promises = ['coverage', 'grab'].map(path => rm(path, { force: true, recursive: true }));
+const baseURL = new URL('..', import.meta.url);
+const options = { force: true, recursive: true };
+const promises = ['coverage', 'grab'].map(dirName => rm(new URL(dirName, baseURL), options));
 await Promise.all(promises);
