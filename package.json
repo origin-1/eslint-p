@@ -25,6 +25,7 @@
     "test": "mocha test/*.js"
   },
   "dependencies": {
+    "all-async": "^0.0.1",
     "eslint": "9.3.0"
   },
   "devDependencies": {
