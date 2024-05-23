@@ -30,7 +30,10 @@ describe
                 assert
                 (
                     stdout.endsWith
-                    ('--concurrency Int               Number of concurrent threads - default: 1\n'),
+                    (
+                        '--concurrency Int               Number of linting threads or 0 to ' +
+                        'calculate automatically - default: 0\n',
+                    ),
                 );
             },
         );
