@@ -28,13 +28,13 @@
     "eslint": "9.3.0"
   },
   "devDependencies": {
-    "@origin-1/eslint-config": "^1.2.1",
+    "@origin-1/eslint-config": "^1.2.3",
     "acorn": "^8.11.3",
     "c8js": "^0.7.0",
     "esprima": "^4.0.1",
     "file-entry-cache": "^8.0.0",
     "fs-teardown": "^0.3.2",
-    "globals": "^15.1.0",
+    "globals": "^15.3.0",
     "imurmurhash": "^0.1.4",
     "mocha": "^10.4.0",
     "sinon": "^18.0.0"
