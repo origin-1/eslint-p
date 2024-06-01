@@ -73,7 +73,7 @@ describe
                     [
                         'npx',
                         [
-                            '@eslint/config-inspector',
+                            '@eslint/config-inspector@latest',
                             '--config',
                             join(pkgPath, 'eslint.config.js'),
                             '--basePath',
