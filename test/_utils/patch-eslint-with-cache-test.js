@@ -14,11 +14,11 @@ export default async function (ESLint, eslintDirURL)
     {
         const lintSingleFile = await createLintSingleFile.call(this);
         const wrapper =
-        async fileInfo =>
+        async filePath =>
         {
             spy.resetHistory();
-            const result = await lintSingleFile(fileInfo);
-            const readFileCalled = spy.calledWith(fileInfo.filePath);
+            const result = await lintSingleFile(filePath);
+            const readFileCalled = spy.calledWith(filePath);
             return { ...result, readFileCalled };
         };
         return wrapper;

@@ -1,21 +1,24 @@
 /* globals after, afterEach, before, beforeEach, describe, it */
 
-import assert                                           from 'node:assert';
+import assert                               from 'node:assert';
 
 import fsPromises, { copyFile, cp, mkdir, readFile, realpath, rm, stat, unlink, utimes, writeFile }
 from 'node:fs/promises';
 
-import { platform, tmpdir }                             from 'node:os';
-import { basename, dirname, join, relative, resolve }   from 'node:path';
-import { setImmediate }                                 from 'node:timers/promises';
-import { fileURLToPath }                                from 'node:url';
-import { setEnvironmentData }                           from 'node:worker_threads';
-import eslintDirURL                                     from '../lib/default-eslint-dir-url.js';
-import patchESLint                                      from '../lib/patch-eslint.js';
-import { createCustomTeardown, unIndent }               from './_utils/index.js';
-import fCache                                           from 'file-entry-cache';
-import murmur                                           from 'imurmurhash';
-import sinon                                            from 'sinon';
+import { platform, tmpdir }                 from 'node:os';
+
+import { basename, dirname, extname, join, relative, resolve }
+from 'node:path';
+
+import { setImmediate }                     from 'node:timers/promises';
+import { fileURLToPath }                    from 'node:url';
+import { setEnvironmentData }               from 'node:worker_threads';
+import eslintDirURL                         from '../lib/default-eslint-dir-url.js';
+import patchESLint                          from '../lib/patch-eslint.js';
+import { createCustomTeardown, unIndent }   from './_utils/index.js';
+import fCache                               from 'file-entry-cache';
+import murmur                               from 'imurmurhash';
+import sinon                                from 'sinon';
 
 async function getESLint()
 {
@@ -258,12 +261,13 @@ describe
             'should throw if eslint.config.js file is not present',
             async () =>
             {
+                const cwd = getFixturePath('..');
                 eslint =
                 await ESLint.fromCLIOptions
                 (
                     {
-                        cwd:            getFixturePath('..'),
-                        configLookup:   true,
+                        cwd,
+                        configLookup: true,
                     },
                 );
                 await assert.rejects
@@ -329,6 +333,66 @@ describe
                 (
                     async () => await eslint.lintParallel(['lib/eslint-p.js']),
                     /Expected object with parse\(\) or parseForESLint\(\) method/u,
+                );
+            },
+        );
+
+        describe
+        (
+            'Overlapping searches',
+            () =>
+            {
+                it
+                (
+                    'should not lint the same file multiple times when the file path was passed ' +
+                    'multiple times',
+                    async () =>
+                    {
+                        const cwd = getFixturePath();
+                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        const results =
+                        await eslint.lintParallel
+                        (['files/foo.js', 'files/../files/foo.js', 'files/foo.js']);
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].filePath, join(cwd, 'files/foo.js'));
+                        assert.strictEqual(results[0].messages.length, 0);
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should not lint the same file multiple times when the file path and a ' +
+                    'pattern that matches the file were passed',
+                    async () =>
+                    {
+                        const cwd = getFixturePath();
+                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        const results = await eslint.lintParallel(['files/foo.js', 'files/foo*']);
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].filePath, join(cwd, 'files/foo.js'));
+                        assert.strictEqual(results[0].messages.length, 0);
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should not lint the same file multiple times when multiple patterns that ' +
+                    'match the file were passed',
+                    async () =>
+                    {
+                        const cwd = getFixturePath();
+                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        const results = await eslint.lintParallel(['files/f*.js', 'files/foo*']);
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].filePath, join(cwd, 'files/foo.js'));
+                        assert.strictEqual(results[0].messages.length, 0);
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
                 );
             },
         );
@@ -482,18 +546,46 @@ describe
             },
         );
 
+        // https://github.com/eslint/eslint/issues/18550
+        it
+        (
+            'should skip files with non-standard extensions when they\'re matched only by a ' +
+            '\'*\' files pattern',
+            async () =>
+            {
+                const cwd = getFixturePath('files');
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd,
+                        overrideConfig: { files: ['*'] },
+                    },
+                );
+                const results = await eslint.lintParallel(['.']);
+
+                assert.strictEqual(results.length, 2);
+                assert
+                (
+                    results.every(result => /^\.[cm]?js$/u.test(extname(result.filePath))),
+                    'File with a non-standard extension was linted',
+                );
+            },
+        );
+
         // https://github.com/eslint/eslint/issues/16413
         it
         (
             'should find files and report zero messages when given a parent directory with a .js',
             async () =>
             {
+                const cwd = getFixturePath('example-app/subdir');
                 eslint =
                 await ESLint.fromCLIOptions
                 (
                     {
                         ignore:         false,
-                        cwd:            getFixturePath('example-app/subdir'),
+                        cwd,
                         configLookup:   true,
                     },
                 );
@@ -513,13 +605,13 @@ describe
             'should allow files patterns with \'..\' inside',
             async () =>
             {
+                const cwd = getFixturePath('dots-in-files');
                 eslint =
                 await ESLint.fromCLIOptions
                 (
                     {
-                        ignore:         false,
-                        cwd:            getFixturePath('dots-in-files'),
-                        configLookup:   true,
+                        ignore: false,
+                        cwd,
                     },
                 );
                 const results = await eslint.lintParallel(['.']);
@@ -537,13 +629,13 @@ describe
             'should only find files in the subdir1 directory when given a directory name',
             async () =>
             {
+                const cwd = getFixturePath('example-app2');
                 eslint =
                 await ESLint.fromCLIOptions
                 (
                     {
-                        ignore:         false,
-                        cwd:            getFixturePath('example-app2'),
-                        configLookup:   true,
+                        ignore: false,
+                        cwd,
                     },
                 );
                 const results = await eslint.lintParallel(['subdir1']);
@@ -562,12 +654,13 @@ describe
             'should run',
             async () =>
             {
+                const cwd = getFixturePath('{curly-path}', 'server');
                 eslint =
                 await ESLint.fromCLIOptions
                 (
                     {
-                        cwd:            getFixturePath('{curly-path}', 'server'),
-                        configLookup:   true,
+                        cwd,
+                        configLookup: true,
                     },
                 );
                 const results = await eslint.lintParallel(['src/**/*.{js,json}']);
@@ -589,12 +682,13 @@ describe
             'should work with config file that exports a promise',
             async () =>
             {
+                const cwd = getFixturePath('promise-config');
                 eslint =
                 await ESLint.fromCLIOptions
                 (
                     {
-                        cwd:            getFixturePath('promise-config'),
-                        configLookup:   true,
+                        cwd,
+                        configLookup: true,
                     },
                 );
                 const results = await eslint.lintParallel(['a*.js']);
@@ -618,12 +712,13 @@ describe
                     'should find dot files in current directory when a . pattern is used',
                     async () =>
                     {
+                        const cwd = getFixturePath('dot-files');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('dot-files'),
-                                configLookup:   true,
+                                cwd,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintParallel(['.']);
@@ -646,12 +741,13 @@ describe
                     'should find dot files in current directory when a *.js pattern is used',
                     async () =>
                     {
+                        const cwd = getFixturePath('dot-files');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('dot-files'),
-                                configLookup:   true,
+                                cwd,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintParallel(['*.js']);
@@ -674,14 +770,8 @@ describe
                     'should find dot files in current directory when a .a.js pattern is used',
                     async () =>
                     {
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            getFixturePath('dot-files'),
-                                configLookup:   true,
-                            },
-                        );
+                        const cwd = getFixturePath('dot-files');
+                        eslint = await ESLint.fromCLIOptions({ cwd });
                         const results = await eslint.lintParallel(['.a.js']);
 
                         assert.strictEqual(results.length, 1);
@@ -705,13 +795,13 @@ describe
                     'pattern',
                     async () =>
                     {
+                        const cwd = getFixturePath('example-app2');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                ignore:         false,
-                                cwd:            getFixturePath('example-app2'),
-                                configLookup:   true,
+                                ignore: false,
+                                cwd,
                             },
                         );
                         await assert.rejects
@@ -729,13 +819,13 @@ describe
                     'found pattern',
                     async () =>
                     {
+                        const cwd = getFixturePath('example-app2');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('example-app2'),
+                                cwd,
                                 overrideConfig: { ignores: ['subdir2'] },
-                                configLookup:   true,
                             },
                         );
                         await assert.rejects
@@ -753,13 +843,13 @@ describe
                     'found pattern',
                     async () =>
                     {
+                        const cwd = getFixturePath('example-app2');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('example-app2'),
+                                cwd,
                                 overrideConfig: { ignores: ['subdir2/*.js'] },
-                                configLookup:   true,
                             },
                         );
                         await assert.rejects
@@ -776,13 +866,13 @@ describe
                     'should always throw an error for the first unmatched file pattern',
                     async () =>
                     {
+                        const cwd = getFixturePath('example-app2');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('example-app2'),
+                                cwd,
                                 overrideConfig: { ignores: ['subdir1/*.js', 'subdir2/*.js'] },
-                                configLookup:   true,
                             },
                         );
                         await assert.rejects
@@ -821,14 +911,14 @@ describe
                     'errorOnUnmatchedPattern is false',
                     async () =>
                     {
+                        const cwd = getFixturePath('example-app2');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:                        getFixturePath('example-app2'),
+                                cwd,
                                 overrideConfig:             { ignores: ['subdir2/*.js'] },
                                 errorOnUnmatchedPattern:    false,
-                                configLookup:               true,
                             },
                         );
                         const results = await eslint.lintParallel(['subdir2/*.js']);
@@ -843,13 +933,13 @@ describe
                     'errorOnUnmatchedPattern is false',
                     async () =>
                     {
+                        const cwd = getFixturePath('example-app2');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:                        getFixturePath('example-app2'),
-                                errorOnUnmatchedPattern:    false,
-                                configLookup:               true,
+                                cwd,
+                                errorOnUnmatchedPattern: false,
                             },
                         );
                         const results = await eslint.lintParallel(['doesexist/*.js']);
@@ -872,12 +962,13 @@ describe
                     'file specifying a subdirectory',
                     async () =>
                     {
+                        const cwd = getFixturePath('shallow-glob');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
                                 ignore:         false,
-                                cwd:            getFixturePath('shallow-glob'),
+                                cwd,
                                 configLookup:   true,
                             },
                         );
@@ -1083,14 +1174,8 @@ describe
                     'if ignored by default',
                     async () =>
                     {
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            getFixturePath('cli-engine'),
-                                configLookup:   true,
-                            },
-                        );
+                        const cwd = getFixturePath('cli-engine');
+                        eslint = await ESLint.fromCLIOptions({ cwd });
                         const results = await eslint.lintParallel(['node_modules/foo.js']);
                         const expectedMsg =
                         'File ignored by default because it is located under the node_modules ' +
@@ -1115,14 +1200,8 @@ describe
                     'if ignored by default',
                     async () =>
                     {
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            getFixturePath('cli-engine'),
-                                configLookup:   true,
-                            },
-                        );
+                        const cwd = getFixturePath('cli-engine');
+                        eslint = await ESLint.fromCLIOptions({ cwd });
                         const results =
                         await eslint.lintParallel
                         (['nested_node_modules/subdir/node_modules/text.js']);
@@ -1148,13 +1227,13 @@ describe
                     'should report on an ignored file with "node_modules" in its name',
                     async () =>
                     {
+                        const cwd = getFixturePath('cli-engine');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('cli-engine'),
-                                ignorePattern:  ['*.js'],
-                                configLookup:   true,
+                                cwd,
+                                ignorePattern: ['*.js'],
                             },
                         );
                         const results = await eslint.lintParallel(['node_modules_cleaner.js']);
@@ -1181,13 +1260,13 @@ describe
                     'explicitly and warnIgnored is false',
                     async () =>
                     {
+                        const cwd = getFixturePath('cli-engine');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('cli-engine'),
-                                warnIgnored:    false,
-                                configLookup:   true,
+                                cwd,
+                                warnIgnored: false,
                             },
                         );
                         const results = await eslint.lintParallel(['node_modules/foo.js']);
@@ -1201,12 +1280,13 @@ describe
                     'should report on globs with explicit inclusion of dotfiles',
                     async () =>
                     {
+                        const cwd = getFixturePath('cli-engine');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:    getFixturePath('cli-engine'),
-                                rule:   { quotes: [2, 'single'] },
+                                cwd,
+                                rule: { quotes: [2, 'single'] },
                             },
                         );
                         const results = await eslint.lintParallel(['hidden/.hiddenfolder/*.js']);
@@ -1240,13 +1320,13 @@ describe
                     'should ignore node_modules files even with ignore: false',
                     async () =>
                     {
+                        const cwd = getFixturePath('cli-engine');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd:            getFixturePath('cli-engine'),
-                                ignore:         false,
-                                configLookup:   true,
+                                cwd,
+                                ignore: false,
                             },
                         );
                         await assert.rejects
@@ -1399,6 +1479,61 @@ describe
                             'File ignored because of a matching ignore pattern. Use ' +
                             '"--no-ignore" to disable file ignore settings or use ' +
                             '"--no-warn-ignored" to suppress this warning.',
+                        );
+                        assert.strictEqual(results[0].errorCount, 0);
+                        assert.strictEqual(results[0].warningCount, 1);
+                        assert.strictEqual(results[0].fatalErrorCount, 0);
+                        assert.strictEqual(results[0].fixableErrorCount, 0);
+                        assert.strictEqual(results[0].fixableWarningCount, 0);
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should return a warning when an explicitly given file has no matching config',
+                    async () =>
+                    {
+                        const cwd = getFixturePath();
+                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        const filePath = getFixturePath('files', 'foo.js2');
+                        const results = await eslint.lintParallel([filePath]);
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].filePath, filePath);
+                        assert.strictEqual(results[0].messages[0].severity, 1);
+                        assert.strictEqual
+                        (
+                            results[0].messages[0].message,
+                            'File ignored because no matching configuration was supplied.',
+                        );
+                        assert.strictEqual(results[0].errorCount, 0);
+                        assert.strictEqual(results[0].warningCount, 1);
+                        assert.strictEqual(results[0].fatalErrorCount, 0);
+                        assert.strictEqual(results[0].fixableErrorCount, 0);
+                        assert.strictEqual(results[0].fixableWarningCount, 0);
+                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                it
+                (
+                    'should return a warning when an explicitly given file is outside the base ' +
+                    'path',
+                    async () =>
+                    {
+                        const cwd = getFixturePath('files');
+                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        const filePath = getFixturePath('passing.js');
+                        const results = await eslint.lintParallel([filePath]);
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual(results[0].filePath, filePath);
+                        assert.strictEqual(results[0].messages[0].severity, 1);
+                        assert.strictEqual
+                        (
+                            results[0].messages[0].message,
+                            'File ignored because outside of base path.',
                         );
                         assert.strictEqual(results[0].errorCount, 0);
                         assert.strictEqual(results[0].warningCount, 1);
@@ -1871,7 +2006,7 @@ describe
                         );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintFiles(['.']); },
+                            async () => { await eslint.lintParallel(['.']); },
                             /All files matched by '.' are ignored/u,
                         );
                     },
@@ -5038,7 +5173,7 @@ describe
             'should throw if non-boolean value is given to \'options.warnIgnored\' option',
             async () =>
             {
-                eslint = await ESLint.fromCLIOptions({ configLookup: true });
+                eslint = await ESLint.fromCLIOptions();
                 await assert.rejects
                 (
                     () => eslint.lintParallel(777),
