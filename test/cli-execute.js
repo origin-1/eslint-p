@@ -1,5 +1,3 @@
-/* globals after, afterEach, before, beforeEach, describe, it */
-
 import assert           from 'node:assert/strict';
 
 import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync }

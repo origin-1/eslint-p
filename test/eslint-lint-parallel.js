@@ -1,5 +1,3 @@
-/* globals after, afterEach, before, beforeEach, describe, it */
-
 import assert                               from 'node:assert';
 
 import fsPromises, { copyFile, cp, mkdir, readFile, realpath, rm, stat, unlink, utimes, writeFile }

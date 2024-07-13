@@ -1,5 +1,3 @@
-/* globals describe, it */
-
 import assert                   from 'node:assert/strict';
 import { execFile, fork }       from 'node:child_process';
 import { mkdtemp, writeFile }   from 'node:fs/promises';
