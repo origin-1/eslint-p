@@ -23,11 +23,12 @@ function getFixturePath(...args)
     return filepath;
 }
 
-const [{ ESLint }, { default: log }, { default: RuntimeInfo }, execute] =
+const [{ ESLint }, { inactiveFlags }, { default: log }, { default: RuntimeInfo }, execute] =
 await Promise.all
 (
     [
         import(`${eslintDirURL}lib/eslint/eslint.js`),
+        import(`${eslintDirURL}lib/shared/flags.js`),
         import(`${eslintDirURL}lib/shared/logging.js`),
         import(`${eslintDirURL}lib/shared/runtime-info.js`),
         createCLIExecute(eslintDirURL, null),
@@ -65,6 +66,7 @@ describe
             () =>
             {
                 sinon.stub(log, 'info');
+                sinon.stub(log, 'warn');
                 sinon.stub(log, 'error');
             },
         );
@@ -103,7 +105,7 @@ describe
                             'var foo = \'bar\';',
                         );
 
-                        assert.strictEqual(result, 1);
+                        assert.equal(result, 1);
                     },
                 );
 
@@ -117,7 +119,7 @@ describe
                         await execute
                         (['argv0', 'argv1', '--stdin', flag, '--stdin-filename', 'foo.js'], '');
 
-                        assert.strictEqual(result, 0);
+                        assert.equal(result, 0);
                         assert(log.info.notCalled);
                     },
                 );
@@ -130,7 +132,7 @@ describe
                         const filePath = getFixturePath('files');
                         const result = await execute(`--blah --another ${filePath}`);
 
-                        assert.strictEqual(result, 2);
+                        assert.equal(result, 2);
                     },
                 );
             },
@@ -159,7 +161,7 @@ describe
                         const code = `--no-ignore --config ${configPath} ${filePath}`;
                         const exitStatus = await execute(code);
 
-                        assert.strictEqual(exitStatus, 1);
+                        assert.equal(exitStatus, 1);
                     },
                 );
             },
@@ -206,7 +208,7 @@ describe
                         const filePath = getFixturePath('passing.js');
                         const exit = await execute(`${flag} -f json ${filePath}`);
 
-                        assert.strictEqual(exit, 0);
+                        assert.equal(exit, 0);
                     },
                 );
 
@@ -233,7 +235,7 @@ describe
                                 await execute
                                 (`--no-ignore -f json-with-metadata ${filePath} ${flag}`);
 
-                                assert.strictEqual(exit, 0);
+                                assert.equal(exit, 0);
 
                                 /*
                                  * Note: For flat config, rulesMeta only contains meta data for the
@@ -272,7 +274,7 @@ describe
                                     '\'hello\' + \'world\';',
                                 );
 
-                                assert.strictEqual(exit, 1);
+                                assert.equal(exit, 1);
 
                                 const { metadata } = JSON.parse(log.info.args[0][0]);
 
@@ -298,7 +300,7 @@ describe
                                     '\'hello world\';',
                                 );
 
-                                assert.strictEqual(exit, 0);
+                                assert.equal(exit, 0);
 
                                 const { metadata } = JSON.parse(log.info.args[0][0]);
 
@@ -329,7 +331,7 @@ describe
                                 const filePath = getFixturePath('passing.js');
                                 const exit = await execute(`-f fakeformatter ${filePath}`);
 
-                                assert.strictEqual(exit, 2);
+                                assert.equal(exit, 2);
                             },
                         );
                     },
@@ -357,7 +359,7 @@ describe
                                 const filePath = getFixturePath('passing.js');
                                 const exit = await execute(`-f ${formatterPath} ${filePath}`);
 
-                                assert.strictEqual(exit, 0);
+                                assert.equal(exit, 0);
                             },
                         );
                     },
@@ -387,7 +389,7 @@ describe
                                 const exit =
                                 await execute(`--no-ignore -f ${formatterPath} ${filePath}`);
 
-                                assert.strictEqual(exit, 2);
+                                assert.equal(exit, 2);
                             },
                         );
                     },
@@ -415,9 +417,8 @@ describe
                                 const filePath = getFixturePath('passing.js');
                                 const exit = await execute(`-f ${formatterPath} ${filePath}`);
 
-                                assert.strictEqual
-                                (log.info.getCall(0).args[0], 'from async formatter');
-                                assert.strictEqual(exit, 0);
+                                assert.equal(log.info.getCall(0).args[0], 'from async formatter');
+                                assert.equal(exit, 0);
                             },
                         );
                     },
@@ -447,7 +448,7 @@ describe
                         const code = `--no-ignore --rule no-undef:2 ${filePath}`;
                         const exit = await execute(code);
 
-                        assert.strictEqual(exit, 1);
+                        assert.equal(exit, 1);
                     },
                 );
 
@@ -460,7 +461,7 @@ describe
                         const code = `--fix-type suggestion ${filePath}`;
                         const exit = await execute(code);
 
-                        assert.strictEqual(exit, 2);
+                        assert.equal(exit, 2);
                     },
                 );
 
@@ -472,7 +473,7 @@ describe
                         const filePath = getFixturePath('syntax-error.js');
                         const exit = await execute(`--no-ignore ${filePath}`);
 
-                        assert.strictEqual(exit, 1);
+                        assert.equal(exit, 1);
                     },
                 );
             },
@@ -551,8 +552,8 @@ describe
                     {
                         sinon.stub(RuntimeInfo, 'environment').returns('');
 
-                        assert.strictEqual(await execute('--env-info'), 0);
-                        assert.strictEqual(log.info.callCount, 1);
+                        assert.equal(await execute('--env-info'), 0);
+                        assert.equal(log.info.callCount, 1);
                     },
                 );
 
@@ -563,8 +564,8 @@ describe
                     {
                         sinon.stub(RuntimeInfo, 'environment').throws('There was an error!');
 
-                        assert.strictEqual(await execute('--env-info'), 2);
-                        assert.strictEqual(log.error.callCount, 1);
+                        assert.equal(await execute('--env-info'), 2);
+                        assert.equal(log.error.callCount, 1);
                     },
                 );
             },
@@ -575,8 +576,8 @@ describe
             'when executing with help flag should print out help',
             async () =>
             {
-                assert.strictEqual(await execute('-h'), 0);
-                assert.strictEqual(log.info.callCount, 1);
+                assert.equal(await execute('-h'), 0);
+                assert.equal(log.info.callCount, 1);
             },
         );
 
@@ -589,7 +590,7 @@ describe
                 const flag = '--no-config-lookup';
                 const exit = await execute(`${flag} --no-ignore ${filePath}`);
 
-                assert.strictEqual(exit, 0);
+                assert.equal(exit, 0);
             },
         );
 
@@ -617,7 +618,7 @@ describe
                         const code = `--no-ignore --config ${configPath} ${filePath}`;
                         const exitStatus = await execute(code);
 
-                        assert.strictEqual(exitStatus, 0);
+                        assert.equal(exitStatus, 0);
                     },
                 );
 
@@ -640,7 +641,7 @@ describe
                                 );
 
                                 assert(log.info.calledOnce);
-                                assert.strictEqual(exit, 1);
+                                assert.equal(exit, 1);
                             },
                         );
 
@@ -655,7 +656,7 @@ describe
                                 (`--global baz:false,bat:true --no-ignore ${filePath}`);
 
                                 assert(log.info.notCalled);
-                                assert.strictEqual(exit, 0);
+                                assert.equal(exit, 0);
                             },
                         );
 
@@ -670,7 +671,7 @@ describe
                                 (`--global baz --global bat:true --no-ignore ${filePath}`);
 
                                 assert(log.info.notCalled);
-                                assert.strictEqual(exit, 0);
+                                assert.equal(exit, 0);
                             },
                         );
                     },
@@ -686,7 +687,7 @@ describe
                         const code = `--no-ignore --rule 'quotes: [2, double]' ${filePath}`;
                         const exitStatus = await execute(code);
 
-                        assert.strictEqual(exitStatus, 1);
+                        assert.equal(exitStatus, 1);
                     },
                 );
 
@@ -739,7 +740,7 @@ describe
                                 const cliArgs = `--quiet --config ${configPath}' ${filePath}`;
                                 const exit = await execute(cliArgs);
 
-                                assert.strictEqual(exit, 0);
+                                assert.equal(exit, 0);
                             },
                         );
 
@@ -797,7 +798,7 @@ describe
                                 await execute
                                 (`--no-error-on-unmatched-pattern "${filePath}/unmatched*.js"`);
 
-                                assert.strictEqual(exit, 0);
+                                assert.equal(exit, 0);
                             },
                         );
 
@@ -821,7 +822,7 @@ describe
                                             `${filePath}/unmatched1*.js ${filePath}/unmatched2*.js`,
                                         );
 
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -839,7 +840,7 @@ describe
                                             `${filePath}/unmatched1*.js ${filePath}/failing.js`,
                                         );
 
-                                        assert.strictEqual(exit, 1);
+                                        assert.equal(exit, 1);
                                     },
                                 );
                             },
@@ -865,7 +866,7 @@ describe
                                         await execute
                                         (`--no-ignore --parser-options test111 ${filePath}`);
 
-                                        assert.strictEqual(exit, 2);
+                                        assert.equal(exit, 2);
                                     },
                                 );
 
@@ -879,7 +880,7 @@ describe
                                         await execute
                                         (`--no-ignore --parser-options=ecmaVersion:6 ${filePath}`);
 
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -894,7 +895,7 @@ describe
                                         await execute
                                         (`--no-ignore --parser-options=ecmaVersion:6 ${filePath}`);
 
-                                        assert.strictEqual(exit, 1);
+                                        assert.equal(exit, 1);
                                     },
                                 );
 
@@ -909,7 +910,7 @@ describe
                                         await execute
                                         (`--no-ignore --parser-options=ecmaVersion:7 ${filePath}`);
 
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -929,7 +930,7 @@ describe
                                             `--parser-options=ecmaVersion:7 ${filePath}`,
                                         );
 
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
                             },
@@ -963,7 +964,7 @@ describe
                                 await execute
                                 (`--no-ignore --max-warnings 10 ${filePath} -c ${configFilePath}`);
 
-                                assert.strictEqual(exitCode, 0);
+                                assert.equal(exitCode, 0);
                             },
                         );
 
@@ -976,7 +977,7 @@ describe
                                 await execute
                                 (`--no-ignore --max-warnings 5 ${filePath} -c ${configFilePath}`);
 
-                                assert.strictEqual(exitCode, 1);
+                                assert.equal(exitCode, 1);
                                 assert.ok(log.error.calledOnce);
                                 assert
                                 (
@@ -999,7 +1000,7 @@ describe
                                     configFilePath}`,
                                 );
 
-                                assert.strictEqual(exitCode, 1);
+                                assert.equal(exitCode, 1);
                                 assert.ok(log.error.calledOnce);
                                 assert
                                 (
@@ -1019,7 +1020,7 @@ describe
                                 await execute
                                 (`--no-ignore --max-warnings 6 ${filePath} -c ${configFilePath}`);
 
-                                assert.strictEqual(exitCode, 0);
+                                assert.equal(exitCode, 0);
                             },
                         );
 
@@ -1031,7 +1032,7 @@ describe
                             {
                                 const exitCode = await execute(`-c ${configFilePath} ${filePath}`);
 
-                                assert.strictEqual(exitCode, 0);
+                                assert.equal(exitCode, 0);
                             },
                         );
                     },
@@ -1052,7 +1053,7 @@ describe
                                 const exitCode =
                                 await execute(`--no-ignore --exit-on-fatal-error ${filePath}`);
 
-                                assert.strictEqual(exitCode, 0);
+                                assert.equal(exitCode, 0);
                             },
                         );
 
@@ -1068,7 +1069,7 @@ describe
                                 const exitCode =
                                 await execute(`--no-ignore --exit-on-fatal-error ${filePath}`);
 
-                                assert.strictEqual(exitCode, 1);
+                                assert.equal(exitCode, 1);
                             },
                         );
 
@@ -1082,7 +1083,7 @@ describe
                                 const exitCode =
                                 await execute(`--no-ignore --exit-on-fatal-error ${filePath}`);
 
-                                assert.strictEqual(exitCode, 2);
+                                assert.equal(exitCode, 2);
                             },
                         );
 
@@ -1095,7 +1096,7 @@ describe
                                 const exitCode =
                                 await execute(`--no-ignore --exit-on-fatal-error ${filePath}`);
 
-                                assert.strictEqual(exitCode, 2);
+                                assert.equal(exitCode, 2);
                             },
                         );
                     },
@@ -1144,7 +1145,7 @@ describe
 
                                         // a warning about the ignored file
                                         assert(log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -1162,7 +1163,7 @@ describe
 
                                         // no warnings
                                         assert(!log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -1179,7 +1180,7 @@ describe
                                         await execute(`${options} --no-warn-ignored ${filePath}`);
 
                                         assert(!log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -1192,7 +1193,7 @@ describe
                                         const exit = await execute('--pass-on-no-patterns');
 
                                         assert(!log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -1215,7 +1216,7 @@ describe
                                         );
 
                                         assert(!log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
                             },
@@ -1244,7 +1245,7 @@ describe
 
                                         // warnings about the ignored files
                                         assert(log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -1264,7 +1265,7 @@ describe
                                         const exit =
                                         await execute('**/*.js --ignore-pattern subdir/**');
 
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
 
                                         await assert.rejects
                                         (
@@ -1305,7 +1306,7 @@ describe
 
                                         // parsing error causes exit code 1
                                         assert(log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
 
@@ -1321,7 +1322,7 @@ describe
 
                                         // parsing error causes exit code 1
                                         assert(log.info.called);
-                                        assert.strictEqual(exit, 0);
+                                        assert.equal(exit, 0);
                                     },
                                 );
                             },
@@ -1360,7 +1361,7 @@ describe
                         const exit =
                         await execute(`${flag} --no-ignore --parser espree ${filePath}`);
 
-                        assert.strictEqual(exit, 0);
+                        assert.equal(exit, 0);
                     },
                 );
             },
@@ -1408,7 +1409,7 @@ describe
                         await execute(code, 'var a = \'b\'');
 
                         assert(existsSync(`${outDir}/eslint-output.txt`));
-                        assert.strictEqual(readFileSync(`${outDir}/eslint-output.txt`, 'utf8'), '');
+                        assert.equal(readFileSync(`${outDir}/eslint-output.txt`, 'utf8'), '');
                         assert(log.info.notCalled);
                     },
                 );
@@ -1424,7 +1425,7 @@ describe
                         mkdirSync(outDir);
                         const exit = await execute(code);
 
-                        assert.strictEqual(exit, 2);
+                        assert.equal(exit, 2);
                         assert(log.info.notCalled);
                         assert(log.error.calledOnce);
                     },
@@ -1442,7 +1443,7 @@ describe
                         writeFileSync(outDir, 'foo');
                         const exit = await execute(code);
 
-                        assert.strictEqual(exit, 2);
+                        assert.equal(exit, 2);
                         assert(log.info.notCalled);
                         assert(log.error.calledOnce);
                     },
@@ -1512,7 +1513,7 @@ describe
                         sinon.stub(ESLint, 'outputFixes');
                         const exitCode = await execute('.');
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
             },
@@ -1543,7 +1544,7 @@ describe
                         sinon.stub(ESLint, 'outputFixes');
                         const exitCode = await execute('--fix .');
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -1580,7 +1581,7 @@ describe
                         sinon.mock(ESLint).expects('outputFixes').withExactArgs(report);
                         const exitCode = await execute('--fix .');
 
-                        assert.strictEqual(exitCode, 1);
+                        assert.equal(exitCode, 1);
                     },
                 );
 
@@ -1619,7 +1620,7 @@ describe
                         sinon.mock(ESLint).expects('outputFixes').withExactArgs(report);
                         const exitCode = await execute('--fix --quiet .');
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -1635,7 +1636,7 @@ describe
                         .callThrough();
                         const exitCode = await execute('--fix .', 'foo = bar;');
 
-                        assert.strictEqual(exitCode, 2);
+                        assert.equal(exitCode, 2);
                     },
                 );
             },
@@ -1666,7 +1667,7 @@ describe
                         sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run .');
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -1692,7 +1693,7 @@ describe
                         sinon.stub(ESLint, 'outputFixes');
                         const exitCode = await execute('--fix-dry-run --fix-type suggestion .');
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -1729,7 +1730,7 @@ describe
                         sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run .');
 
-                        assert.strictEqual(exitCode, 1);
+                        assert.equal(exitCode, 1);
                     },
                 );
 
@@ -1767,7 +1768,7 @@ describe
                         sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run --quiet .');
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -1804,7 +1805,7 @@ describe
                         sinon.mock(ESLint).expects('outputFixes').never();
                         const exitCode = await execute('--fix-dry-run .', 'foo = bar;');
 
-                        assert.strictEqual(exitCode, 1);
+                        assert.equal(exitCode, 1);
                     },
                 );
 
@@ -1820,7 +1821,7 @@ describe
                         .callThrough();
                         const exitCode = await execute('--fix --fix-dry-run .', 'foo = bar;');
 
-                        assert.strictEqual(exitCode, 2);
+                        assert.equal(exitCode, 2);
                     },
                 );
             },
@@ -1848,7 +1849,7 @@ describe
                         const exitCode = await execute(`--print-config ${filePath}`);
 
                         assert(log.info.calledOnce);
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -1863,7 +1864,7 @@ describe
 
                         assert(log.info.notCalled);
                         assert(log.error.calledOnce);
-                        assert.strictEqual(exitCode, 2);
+                        assert.equal(exitCode, 2);
                     },
                 );
 
@@ -1876,7 +1877,7 @@ describe
 
                         assert(log.info.notCalled);
                         assert(log.error.calledOnce);
-                        assert.strictEqual(exitCode, 2);
+                        assert.equal(exitCode, 2);
                     },
                 );
             },
@@ -1900,9 +1901,8 @@ describe
                             'foo(); // eslint-disable-line no-console',
                         );
 
-                        assert.strictEqual
-                        (log.error.callCount, 0, 'log.error should not be called');
-                        assert.strictEqual(log.info.callCount, 1, 'log.info is called once');
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 1, 'log.info is called once');
                         assert.ok
                         (
                             log.info.firstCall.args[0].includes
@@ -1917,7 +1917,7 @@ describe
                             log.info.firstCall.args[0].includes('1 error and 0 warning'),
                             'has correct error and warning count',
                         );
-                        assert.strictEqual(exitCode, 1, 'exit code should be 1');
+                        assert.equal(exitCode, 1, 'exit code should be 1');
                     },
                 );
 
@@ -1934,9 +1934,8 @@ describe
                             'foo(); // eslint-disable-line no-console',
                         );
 
-                        assert.strictEqual
-                        (log.error.callCount, 0, 'log.error should not be called');
-                        assert.strictEqual(log.info.callCount, 1, 'log.info is called once');
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 1, 'log.info is called once');
                         assert.ok
                         (
                             log.info.firstCall.args[0].includes
@@ -1951,7 +1950,7 @@ describe
                             log.info.firstCall.args[0].includes('1 error and 0 warning'),
                             'has correct error and warning count',
                         );
-                        assert.strictEqual(exitCode, 1, 'exit code should be 1');
+                        assert.equal(exitCode, 1, 'exit code should be 1');
                     },
                 );
 
@@ -1968,9 +1967,8 @@ describe
                             'foo(); // eslint-disable-line no-console',
                         );
 
-                        assert.strictEqual
-                        (log.error.callCount, 0, 'log.error should not be called');
-                        assert.strictEqual(log.info.callCount, 1, 'log.info is called once');
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 1, 'log.info is called once');
                         assert.ok
                         (
                             log.info.firstCall.args[0].includes
@@ -1985,7 +1983,7 @@ describe
                             log.info.firstCall.args[0].includes('1 error and 0 warning'),
                             'has correct error and warning count',
                         );
-                        assert.strictEqual(exitCode, 1, 'exit code should be 1');
+                        assert.equal(exitCode, 1, 'exit code should be 1');
                     },
                 );
 
@@ -2002,9 +2000,8 @@ describe
                             'foo(); // eslint-disable-line no-console',
                         );
 
-                        assert.strictEqual
-                        (log.error.callCount, 0, 'log.error should not be called');
-                        assert.strictEqual(log.info.callCount, 1, 'log.info is called once');
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 1, 'log.info is called once');
                         assert.ok
                         (
                             log.info.firstCall.args[0].includes
@@ -2019,7 +2016,7 @@ describe
                             log.info.firstCall.args[0].includes('0 errors and 1 warning'),
                             'has correct error and warning count',
                         );
-                        assert.strictEqual(exitCode, 0, 'exit code should be 0');
+                        assert.equal(exitCode, 0, 'exit code should be 0');
                     },
                 );
 
@@ -2036,9 +2033,8 @@ describe
                             'foo(); // eslint-disable-line no-console',
                         );
 
-                        assert.strictEqual
-                        (log.error.callCount, 0, 'log.error should not be called');
-                        assert.strictEqual(log.info.callCount, 1, 'log.info is called once');
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 1, 'log.info is called once');
                         assert.ok
                         (
                             log.info.firstCall.args[0].includes
@@ -2053,7 +2049,7 @@ describe
                             log.info.firstCall.args[0].includes('0 errors and 1 warning'),
                             'has correct error and warning count',
                         );
-                        assert.strictEqual(exitCode, 0, 'exit code should be 0');
+                        assert.equal(exitCode, 0, 'exit code should be 0');
                     },
                 );
 
@@ -2070,10 +2066,9 @@ describe
                             'foo(); // eslint-disable-line no-console',
                         );
 
-                        assert.strictEqual
-                        (log.error.callCount, 0, 'log.error should not be called');
-                        assert.strictEqual(log.info.callCount, 0, 'log.info should not be called');
-                        assert.strictEqual(exitCode, 0, 'exit code should be 0');
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(exitCode, 0, 'exit code should be 0');
                     },
                 );
 
@@ -2090,10 +2085,9 @@ describe
                             'foo(); // eslint-disable-line no-console',
                         );
 
-                        assert.strictEqual
-                        (log.error.callCount, 0, 'log.error should not be called');
-                        assert.strictEqual(log.info.callCount, 0, 'log.info should not be called');
-                        assert.strictEqual(exitCode, 0, 'exit code should be 0');
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(exitCode, 0, 'exit code should be 0');
                     },
                 );
 
@@ -2107,9 +2101,8 @@ describe
                         await execute
                         ('--no-config-lookup --report-unused-disable-directives-severity foo');
 
-                        assert.strictEqual(log.info.callCount, 0, 'log.info should not be called');
-                        assert.strictEqual
-                        (log.error.callCount, 1, 'log.error should be called once');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(log.error.callCount, 1, 'log.error should be called once');
                         assert.deepStrictEqual
                         (
                             log.error.firstCall.args,
@@ -2123,7 +2116,7 @@ describe
                             ],
                             'has the right text to log.error',
                         );
-                        assert.strictEqual(exitCode, 2, 'exit code should be 2');
+                        assert.equal(exitCode, 2, 'exit code should be 2');
                     },
                 );
 
@@ -2140,9 +2133,8 @@ describe
                             '--report-unused-disable-directives-severity warn',
                         );
 
-                        assert.strictEqual(log.info.callCount, 0, 'log.info should not be called');
-                        assert.strictEqual
-                        (log.error.callCount, 1, 'log.error should be called once');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(log.error.callCount, 1, 'log.error should be called once');
                         assert.deepStrictEqual
                         (
                             log.error.firstCall.args,
@@ -2153,7 +2145,7 @@ describe
                             ],
                             'has the right text to log.error',
                         );
-                        assert.strictEqual(exitCode, 2, 'exit code should be 2');
+                        assert.equal(exitCode, 2, 'exit code should be 2');
                     },
                 );
             },
@@ -2193,7 +2185,7 @@ describe
                         '--plugin hello-cjs --rule \'hello-cjs/hello: error\' ../files/*.js';
                         const exitCode = await execute(code);
 
-                        assert.strictEqual(exitCode, 1);
+                        assert.equal(exitCode, 1);
                         assert.ok(log.info.calledOnce);
                         assert(log.info.firstCall.firstArg.includes('Hello CommonJS!'));
                     },
@@ -2208,7 +2200,7 @@ describe
                         '--plugin hello-esm --rule \'hello-esm/hello: error\' ../files/*.js';
                         const exitCode = await execute(code);
 
-                        assert.strictEqual(exitCode, 1);
+                        assert.equal(exitCode, 1);
                         assert.ok(log.info.calledOnce);
                         assert(log.info.firstCall.firstArg.includes('Hello ESM!'));
                     },
@@ -2224,7 +2216,7 @@ describe
                         'hello-esm/hello: error\' ../files/*.js';
                         const exitCode = await execute(code);
 
-                        assert.strictEqual(exitCode, 1);
+                        assert.equal(exitCode, 1);
                         assert.ok(log.info.calledOnce);
                         assert(log.info.firstCall.firstArg.includes('Hello CommonJS!'));
                         assert(log.info.firstCall.firstArg.includes('Hello ESM!'));
@@ -2242,7 +2234,7 @@ describe
                         '../passing.js';
                         const exitCode = await execute(code);
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -2255,7 +2247,7 @@ describe
                         const code = '--plugin \'example, @scope/example\' file.js';
                         const exitCode = await execute(code);
 
-                        assert.strictEqual(exitCode, 0);
+                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -2309,6 +2301,71 @@ describe
                                 '`default` export',
                             },
                         );
+                    },
+                );
+            },
+        );
+
+        describe
+        (
+            '--flag option',
+            () =>
+            {
+                it
+                (
+                    'should emit a warning when an inactive flag is used',
+                    async () =>
+                    {
+                        const configPath = getFixturePath('eslint.config.js');
+                        const filePath = getFixturePath('passing.js');
+                        const input = `--flag test_only_old --config ${configPath} ${filePath}`;
+                        const exitCode = await execute(input);
+
+                        assert(log.warn.calledOnce);
+                        const [formattedOutput] = log.warn.firstCall.args;
+                        assert
+                        (
+                            `InactiveFlag: The 'test_only_old' flag is no longer active: ${
+                            inactiveFlags.get('test_only_old')}`
+                            .includes(formattedOutput),
+                        );
+                        assert.equal(exitCode, 0);
+                    },
+                );
+
+                it
+                (
+                    'should error out when an unknown flag is used',
+                    async () =>
+                    {
+                        const configPath = getFixturePath('eslint.config.js');
+                        const filePath = getFixturePath('passing.js');
+                        const input = `--flag test_only_oldx --config ${configPath} ${filePath}`;
+                        const exitCode = await execute(input);
+
+                        assert(log.error.calledOnce);
+                        const [formattedOutput] = log.error.firstCall.args;
+                        assert
+                        (
+                            'InvalidFlag: The \'test_only_oldx\' flag is invalid.'
+                            .includes(formattedOutput),
+                        );
+                        assert.equal(exitCode, 2);
+                    },
+                );
+
+                it
+                (
+                    'should not error when a valid flag is used',
+                    async () =>
+                    {
+                        const configPath = getFixturePath('eslint.config.js');
+                        const filePath = getFixturePath('passing.js');
+                        const input = `--flag test_only --config ${configPath} ${filePath}`;
+                        const exitCode = await execute(input);
+
+                        assert(log.error.notCalled);
+                        assert.equal(exitCode, 0);
                     },
                 );
             },
