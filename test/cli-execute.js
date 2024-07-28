@@ -21,12 +21,11 @@ function getFixturePath(...args)
     return filepath;
 }
 
-const [{ ESLint }, { inactiveFlags }, { default: log }, { default: RuntimeInfo }, execute] =
+const [{ ESLint }, { default: log }, { default: RuntimeInfo }, execute] =
 await Promise.all
 (
     [
         import(`${eslintDirURL}lib/eslint/eslint.js`),
-        import(`${eslintDirURL}lib/shared/flags.js`),
         import(`${eslintDirURL}lib/shared/logging.js`),
         import(`${eslintDirURL}lib/shared/runtime-info.js`),
         createCLIExecute(eslintDirURL, null),
@@ -64,7 +63,6 @@ describe
             () =>
             {
                 sinon.stub(log, 'info');
-                sinon.stub(log, 'warn');
                 sinon.stub(log, 'error');
             },
         );
@@ -2311,23 +2309,21 @@ describe
             {
                 it
                 (
-                    'should emit a warning when an inactive flag is used',
+                    'should throw an error when an inactive flag is used',
                     async () =>
                     {
                         const configPath = getFixturePath('eslint.config.js');
                         const filePath = getFixturePath('passing.js');
                         const input = `--flag test_only_old --config ${configPath} ${filePath}`;
-                        const exitCode = await execute(input);
 
-                        assert(log.warn.calledOnce);
-                        const [formattedOutput] = log.warn.firstCall.args;
-                        assert
+                        await assert.rejects
                         (
-                            `InactiveFlag: The 'test_only_old' flag is no longer active: ${
-                            inactiveFlags.get('test_only_old')}`
-                            .includes(formattedOutput),
+                            execute(input),
+                            {
+                                message:
+                                'The flag \'test_only_old\' is inactive: Used only for testing.',
+                            },
                         );
-                        assert.equal(exitCode, 0);
                     },
                 );
 
@@ -2339,16 +2335,12 @@ describe
                         const configPath = getFixturePath('eslint.config.js');
                         const filePath = getFixturePath('passing.js');
                         const input = `--flag test_only_oldx --config ${configPath} ${filePath}`;
-                        const exitCode = await execute(input);
 
-                        assert(log.error.calledOnce);
-                        const [formattedOutput] = log.error.firstCall.args;
-                        assert
+                        await assert.rejects
                         (
-                            'InvalidFlag: The \'test_only_oldx\' flag is invalid.'
-                            .includes(formattedOutput),
+                            execute(input),
+                            { message: 'Unknown flag \'test_only_oldx\'.' },
                         );
-                        assert.equal(exitCode, 2);
                     },
                 );
 

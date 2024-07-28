@@ -507,9 +507,9 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
-                        cwd:                join(fixtureDir, '..'),
-                        config:             getFixturePath('eslint.config.js'),
-                        overrideConfig:     { files: ['**/*.js2'] },
+                        cwd:            join(fixtureDir, '..'),
+                        config:         getFixturePath('eslint.config.js'),
+                        overrideConfig: { files: ['**/*.js2'] },
                     },
                 );
                 const results = await eslint.lintParallel([getFixturePath('files/foo.js2')]);
@@ -529,10 +529,10 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
-                        ignore:             false,
-                        cwd:                getFixturePath('..'),
-                        overrideConfig:     { files: ['**/*.js', '**/*.js2'] },
-                        config:             getFixturePath('eslint.config.js'),
+                        ignore:         false,
+                        cwd:            getFixturePath('..'),
+                        overrideConfig: { files: ['**/*.js', '**/*.js2'] },
+                        config:         getFixturePath('eslint.config.js'),
                     },
                 );
                 const results = await eslint.lintParallel(['fixtures/files/']);
@@ -823,7 +823,7 @@ describe
                         (
                             {
                                 cwd,
-                                overrideConfig: { ignores: ['subdir2'] },
+                                ignorePattern: ['subdir2'],
                             },
                         );
                         await assert.rejects
@@ -847,7 +847,7 @@ describe
                         (
                             {
                                 cwd,
-                                overrideConfig: { ignores: ['subdir2/*.js'] },
+                                ignorePattern: ['subdir2/*.js'],
                             },
                         );
                         await assert.rejects
@@ -870,7 +870,7 @@ describe
                         (
                             {
                                 cwd,
-                                overrideConfig: { ignores: ['subdir1/*.js', 'subdir2/*.js'] },
+                                ignorePattern: ['subdir1/*.js', 'subdir2/*.js'],
                             },
                         );
                         await assert.rejects
@@ -915,8 +915,8 @@ describe
                         (
                             {
                                 cwd,
-                                overrideConfig:             { ignores: ['subdir2/*.js'] },
                                 errorOnUnmatchedPattern:    false,
+                                ignorePattern:              ['subdir2/*.js'],
                             },
                         );
                         const results = await eslint.lintParallel(['subdir2/*.js']);
@@ -988,13 +988,13 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
-                                ignore:             false,
+                                ignore: false,
                                 overrideConfig:
                                 {
                                     files:              ['subdir/**/*.jsx', 'target-dir/*.js'],
                                     languageOptions:    { parserOptions: { jsx: true } },
                                 },
-                                cwd:                getFixturePath('shallow-glob'),
+                                cwd:    getFixturePath('shallow-glob'),
                             },
                         );
                         const results = await eslint.lintParallel(['subdir/subsubdir']);
@@ -1028,13 +1028,13 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
-                                ignore:             false,
+                                ignore: false,
                                 overrideConfig:
                                 {
                                     files:              ['s*/subsubdir/*.jsx', 'target-dir/*.js'],
                                     languageOptions:    { parserOptions: { jsx: true } },
                                 },
-                                cwd:                getFixturePath('shallow-glob'),
+                                cwd:    getFixturePath('shallow-glob'),
                             },
                         );
                         const results = await eslint.lintParallel(['subdir']);
@@ -1147,10 +1147,10 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
-                        ignore:             false,
-                        cwd:                getFixturePath('..'),
-                        overrideConfig:     { files: ['**/*.js', '**/*.js2'] },
-                        globInputPaths:     false,
+                        ignore:         false,
+                        cwd:            getFixturePath('..'),
+                        overrideConfig: { files: ['**/*.js', '**/*.js2'] },
+                        globInputPaths: false,
                     },
                 );
                 await assert.rejects
@@ -1775,15 +1775,12 @@ describe
                         (
                             {
                                 cwd: getFixturePath('ignores-relative'),
-                                overrideConfig:
-                                {
-                                    ignores:
-                                    [
-                                        '*.js',
-                                        '!a*.js',
-                                        'a.js',
-                                    ],
-                                },
+                                ignorePattern:
+                                [
+                                    '*.js',
+                                    '!a*.js',
+                                    'a.js',
+                                ],
                             },
                         );
                         const results = await eslint.lintParallel(['a.js']);
@@ -1807,14 +1804,11 @@ describe
                         (
                             {
                                 cwd: getFixturePath('ignores-directory'),
-                                overrideConfig:
-                                {
-                                    ignores:
-                                    [
-                                        'subdir/*',
-                                        '!subdir/subsubdir',
-                                    ],
-                                },
+                                ignorePattern:
+                                [
+                                    'subdir/*',
+                                    '!subdir/subsubdir',
+                                ],
                             },
                         );
                         const results = await eslint.lintParallel(['subdir/**/*.js']);
@@ -1842,18 +1836,15 @@ describe
                         (
                             {
                                 cwd: getFixturePath('ignores-directory-deep'),
-                                overrideConfig:
-                                {
-                                    ignores:
-                                    [
-                                        // ignore all files and directories
-                                        'tests/format/**/*',
-                                        // unignore all directories
-                                        '!tests/format/**/*/',
-                                        // unignore only specific files
-                                        '!tests/format/**/jsfmt.spec.js',
-                                    ],
-                                },
+                                ignorePattern:
+                                [
+                                    // ignore all files and directories
+                                    'tests/format/**/*',
+                                    // unignore all directories
+                                    '!tests/format/**/*/',
+                                    // unignore only specific files
+                                    '!tests/format/**/jsfmt.spec.js',
+                                ],
                             },
                         );
                         const results = await eslint.lintParallel(['.']);
@@ -1887,7 +1878,7 @@ describe
                         (
                             {
                                 cwd:            getFixturePath('ignores-directory-deep'),
-                                overrideConfig: { ignores: ['tests/format/*/'] },
+                                ignorePattern:  ['tests/format/*/'],
                             },
                         );
                         const results = await eslint.lintParallel(['.']);
@@ -1921,14 +1912,11 @@ describe
                         (
                             {
                                 cwd: getFixturePath('ignores-directory-deep'),
-                                overrideConfig:
-                                {
-                                    ignores:
-                                    [
-                                        'tests/format/**/*',
-                                        '!tests/format/jsfmt.spec.js',
-                                    ],
-                                },
+                                ignorePattern:
+                                [
+                                    'tests/format/**/*',
+                                    '!tests/format/jsfmt.spec.js',
+                                ],
                             },
                         );
                         const results = await eslint.lintParallel(['.']);
@@ -1954,17 +1942,13 @@ describe
                         (
                             {
                                 cwd: getFixturePath('ignores-directory-deep'),
-                                overrideConfig:
-                                {
-                                    ignores:
-                                    [
-                                        // ignore 'tests/format/' and all its contents
-                                        'tests/format/**',
-                                        // unignore 'tests/format/', but its contents is still
-                                        // ignored
-                                        '!tests/format/',
-                                    ],
-                                },
+                                ignorePattern:
+                                [
+                                    // ignore 'tests/format/' and all its contents
+                                    'tests/format/**',
+                                    // unignore 'tests/format/', but its contents is still ignored
+                                    '!tests/format/',
+                                ],
                             },
                         );
                         await assert.rejects
@@ -1986,20 +1970,17 @@ describe
                         (
                             {
                                 cwd: getFixturePath('ignores-directory-deep'),
-                                overrideConfig:
-                                {
-                                    ignores:
-                                    [
-                                        // ignore 'tests/format/' and all its contents
-                                        'tests/format/**',
-                                        // this patterns match some or all of its contents, but
-                                        // 'tests/format/' is still ignored
-                                        '!tests/format/jsfmt.spec.js',
-                                        '!tests/format/**/jsfmt.spec.js',
-                                        '!tests/format/*',
-                                        '!tests/format/**/*',
-                                    ],
-                                },
+                                ignorePattern:
+                                [
+                                    // ignore 'tests/format/' and all its contents
+                                    'tests/format/**',
+                                    // this patterns match some or all of its contents, but
+                                    // 'tests/format/' is still ignored
+                                    '!tests/format/jsfmt.spec.js',
+                                    '!tests/format/**/jsfmt.spec.js',
+                                    '!tests/format/*',
+                                    '!tests/format/**/*',
+                                ],
                             },
                         );
                         await assert.rejects
@@ -2020,18 +2001,10 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
-                                cwd: getFixturePath(),
-                                overrideConfig:
-                                [
-                                    {
-                                        // ignore file named `{a,b}.js`, not files named `a.js` or
-                                        // `b.js`
-                                        ignores: ['curly-files/\\{a,b}.js'],
-                                    },
-                                    {
-                                        rules: { 'no-undef': 'warn' },
-                                    },
-                                ],
+                                cwd:            getFixturePath(),
+                                // ignore file named `{a,b}.js`, not files named `a.js` or `b.js`
+                                ignorePattern:  ['curly-files/\\{a,b}.js'],
+                                rule:           { 'no-undef': 'warn' },
                             },
                         );
                         const results = await eslint.lintParallel(['curly-files']);
@@ -2051,6 +2024,73 @@ describe
                         assert.strictEqual(results[1].messages[0].ruleId, 'no-undef');
                         assert.strictEqual(results[1].messages[0].messageId, 'undef');
                         assert.match(results[1].messages[0].message, /'baz'/u);
+                    },
+                );
+
+                // https://github.com/eslint/eslint/issues/18706
+                it
+                (
+                    'should disregard ignore pattern \'/\'',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:                        getFixturePath('ignores-relative'),
+                                ignorePattern:              ['/'],
+                                plugin:                     ['no-program'],
+                                resolvePluginsRelativeTo:   getFixturePath('plugins'),
+                                rule:                       { 'no-program/no-program': 'warn' },
+                            },
+                        );
+                        const results = await eslint.lintParallel(['**/a.js']);
+
+                        assert.strictEqual(results.length, 2);
+                        assert.strictEqual
+                        (results[0].filePath, getFixturePath('ignores-relative', 'a.js'));
+                        assert.strictEqual(results[0].messages.length, 1);
+                        assert.strictEqual(results[0].messages[0].severity, 1);
+                        assert.strictEqual(results[0].messages[0].ruleId, 'no-program/no-program');
+                        assert.strictEqual
+                        (results[0].messages[0].message, 'Program is disallowed.');
+                        assert.strictEqual
+                        (results[1].filePath, getFixturePath('ignores-relative', 'subdir', 'a.js'));
+                        assert.strictEqual(results[1].messages.length, 1);
+                        assert.strictEqual(results[1].messages[0].severity, 1);
+                        assert.strictEqual(results[1].messages[0].ruleId, 'no-program/no-program');
+                        assert.strictEqual
+                        (results[1].messages[0].message, 'Program is disallowed.');
+                    },
+                );
+
+                it
+                (
+                    'should not skip an unignored file in base path when all files are initially ' +
+                    'ignored by \'**\'',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:                        getFixturePath('ignores-relative'),
+                                ignorePattern:              ['**', '!a.js'],
+                                plugin:                     ['no-program'],
+                                resolvePluginsRelativeTo:   getFixturePath('plugins'),
+                                rule:                       { 'no-program/no-program': 'warn' },
+                            },
+                        );
+                        const results = await eslint.lintParallel(['**/a.js']);
+
+                        assert.strictEqual(results.length, 1);
+                        assert.strictEqual
+                        (results[0].filePath, getFixturePath('ignores-relative', 'a.js'));
+                        assert.strictEqual(results[0].messages.length, 1);
+                        assert.strictEqual(results[0].messages[0].severity, 1);
+                        assert.strictEqual(results[0].messages[0].ruleId, 'no-program/no-program');
+                        assert.strictEqual
+                        (results[0].messages[0].message, 'Program is disallowed.');
                     },
                 );
             },
