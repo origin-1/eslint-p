@@ -1,12 +1,15 @@
 /* eslint no-unused-vars: 'off' */
 
-import fs                   from 'node:fs/promises';
-import { createRequire }    from 'node:module';
-import path                 from 'node:path';
-import { pathToFileURL }    from 'node:url';
-import createImportAs       from '../lib/create-import-as.js';
+import fs                               from 'node:fs/promises';
+import { createRequire }                from 'node:module';
+import path                             from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import createImportAs                   from '../lib/create-import-as.js';
+
+const __filename = fileURLToPath(import.meta.url);
 
 /* global FLAT_CONFIG_FILENAMES -- make-grab lib/eslint/eslint.js */
+/* global FLAT_CONFIG_FILENAMES_WITH_TS -- make-grab lib/eslint/eslint.js */
 
 const require = createRequire(import.meta.url);
 
@@ -28,6 +31,12 @@ export default async function createCalculateConfigArray(eslintDirURL, privateMe
     /* global findFlatConfigFile -- make-grab */
 
     /* global locateConfigFileToUse -- make-grab */
+
+    /* global isFileTS -- make-grab */
+
+    /* global isRunningInBun -- make-grab */
+
+    /* global isRunningInDeno -- make-grab */
 
     /* global loadFlatConfigFile -- make-grab */
 

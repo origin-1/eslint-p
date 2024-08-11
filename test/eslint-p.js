@@ -13,12 +13,23 @@ describe
     'eslint-p',
     () =>
     {
+        let pkgPath;
+        let eslintPPath;
+
+        before
+        (
+            () =>
+            {
+                pkgPath = dirname(fileURLToPath(new URL('.', import.meta.url)));
+                eslintPPath = join(pkgPath, 'lib', 'eslint-p.js');
+            },
+        );
+
         it
         (
             'with `--help`',
             async () =>
             {
-                const eslintPPath = fileURLToPath(new URL('../lib/eslint-p.js', import.meta.url));
                 const { stdout } =
                 await promisify(execFile)
                 (
@@ -41,7 +52,6 @@ describe
             'with `--inspect-config` when the command succeeds',
             async () =>
             {
-                const eslintPPath = fileURLToPath(new URL('../lib/eslint-p.js', import.meta.url));
                 const loaderSrc =
                 `
                 import childProcess                 from 'node:child_process';
@@ -64,7 +74,6 @@ describe
                 const exitCode =
                 await new Promise(resolve => { childProcess.once('close', resolve); });
                 assert.equal(exitCode, 0);
-                const pkgPath = dirname(fileURLToPath(new URL('.', import.meta.url)));
                 assert.deepEqual
                 (
                     actualMessage,
@@ -85,10 +94,55 @@ describe
 
         it
         (
+            'with `--inspect-config` and `--flag=unstable_ts_config` when the command succeeds',
+            async () =>
+            {
+                const loaderSrc =
+                `
+                import childProcess                 from 'node:child_process';
+                import { syncBuiltinESMExports }    from 'node:module';
+
+                childProcess.spawnSync = (...args) => process.send(args);
+                syncBuiltinESMExports();
+                `;
+                const cwd = join(pkgPath, 'test', 'fixtures', 'ts-config-files', 'ts');
+                const execArgv = ['--import', `data:text/javascript,${encodeURI(loaderSrc)}`];
+                const childProcess =
+                fork
+                (
+                    eslintPPath,
+                    ['--inspect-config', '--flag=unstable_ts_config'],
+                    { cwd, execArgv, silent: true },
+                );
+                let actualMessage;
+                childProcess.once
+                ('message', message => { actualMessage = message; });
+                const exitCode =
+                await new Promise(resolve => { childProcess.once('close', resolve); });
+                assert.equal(exitCode, 0);
+                assert.deepEqual
+                (
+                    actualMessage,
+                    [
+                        'npx',
+                        [
+                            '@eslint/config-inspector@latest',
+                            '--config',
+                            join(cwd, 'eslint.config.ts'),
+                            '--basePath',
+                            cwd,
+                        ],
+                        { stdio: 'inherit' },
+                    ],
+                );
+            },
+        );
+
+        it
+        (
             'with `--inspect-config` when the command fails',
             async () =>
             {
-                const eslintPPath = fileURLToPath(new URL('../lib/eslint-p.js', import.meta.url));
                 const loaderSrc =
                 `
                 import childProcess                 from 'node:child_process';
@@ -116,7 +170,6 @@ describe
             'when patchESLint fails',
             async () =>
             {
-                const eslintPPath = fileURLToPath(new URL('../lib/eslint-p.js', import.meta.url));
                 const loaderSrc =
                 `
                 import path from 'node:path';
@@ -169,7 +222,6 @@ describe
                         ),
                     ],
                 );
-                const eslintPPath = fileURLToPath(new URL('../lib/eslint-p.js', import.meta.url));
                 const { stdout, stderr } =
                 await promisify(execFile)
                 (

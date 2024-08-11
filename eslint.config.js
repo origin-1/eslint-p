@@ -6,7 +6,7 @@ export default createConfig
     { ignores: ['coverage', 'grab', 'test/fixtures'] },
     {
         jsVersion:          2022,
-        languageOptions:    { globals: globals.nodeBuiltin, sourceType: 'module' },
+        languageOptions:    { globals: globals.nodeBuiltin },
     },
     {
         files:              ['test/*'],
