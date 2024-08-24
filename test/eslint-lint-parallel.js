@@ -1,4 +1,4 @@
-import assert                               from 'node:assert';
+import assert                               from 'node:assert/strict';
 
 import fsPromises, { copyFile, cp, mkdir, readFile, realpath, rm, stat, unlink, utimes, writeFile }
 from 'node:fs/promises';
@@ -151,10 +151,10 @@ describe
                 );
                 const results = await eslint.lintParallel([fileURLToPath(import.meta.url)]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 1);
-                assert.strictEqual(results[0].messages[0].message, 'Parsing error: Boom!');
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 1);
+                assert.equal(results[0].messages[0].message, 'Parsing error: Boom!');
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -174,10 +174,10 @@ describe
                 const results =
                 await eslint.lintParallel(['test/fixtures/simple-valid-project/**/foo*.js']);
 
-                assert.strictEqual(results.length, 2);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 2);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -203,10 +203,10 @@ describe
                     ],
                 );
 
-                assert.strictEqual(results.length, 2);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 2);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -226,9 +226,9 @@ describe
                 );
                 const results = await eslint.lintParallel(['lib/eslint-p.js']);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -248,9 +248,9 @@ describe
                 );
                 const results = await eslint.lintParallel(['test/fixtures/passing.js']);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -352,10 +352,10 @@ describe
                         await eslint.lintParallel
                         (['files/foo.js', 'files/../files/foo.js', 'files/foo.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, join(cwd, 'files/foo.js'));
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, join(cwd, 'files/foo.js'));
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -369,10 +369,10 @@ describe
                         eslint = await ESLint.fromCLIOptions({ cwd });
                         const results = await eslint.lintParallel(['files/foo.js', 'files/foo*']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, join(cwd, 'files/foo.js'));
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, join(cwd, 'files/foo.js'));
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -386,10 +386,10 @@ describe
                         eslint = await ESLint.fromCLIOptions({ cwd });
                         const results = await eslint.lintParallel(['files/f*.js', 'files/foo*']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, join(cwd, 'files/foo.js'));
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, join(cwd, 'files/foo.js'));
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
             },
@@ -404,7 +404,7 @@ describe
                     ['a string with a single space', ' '],
                     ['an array with one empty string', ['']],
                     ['an array with two empty strings', ['', '']],
-                    ['undefined', void 0],
+                    ['undefined', undefined],
                 ]
                 .forEach
                 (
@@ -461,14 +461,12 @@ describe
                                 );
                                 const results = await eslint.lintParallel(value);
 
-                                assert.strictEqual(results.length, 2);
-                                assert.strictEqual
-                                (results[0].filePath, getFixturePath('files/.bar.js'));
-                                assert.strictEqual(results[0].messages.length, 0);
-                                assert.strictEqual
-                                (results[1].filePath, getFixturePath('files/foo.js'));
-                                assert.strictEqual(results[1].messages.length, 0);
-                                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                                assert.equal(results.length, 2);
+                                assert.equal(results[0].filePath, getFixturePath('files/.bar.js'));
+                                assert.equal(results[0].messages.length, 0);
+                                assert.equal(results[1].filePath, getFixturePath('files/foo.js'));
+                                assert.equal(results[1].messages.length, 0);
+                                assert.equal(results[0].suppressedMessages.length, 0);
                             },
                         );
 
@@ -490,7 +488,7 @@ describe
                                 );
                                 const results = await eslint.lintParallel(value);
 
-                                assert.strictEqual(results.length, 0);
+                                assert.equal(results.length, 0);
                             },
                         );
                     },
@@ -514,9 +512,9 @@ describe
                 );
                 const results = await eslint.lintParallel([getFixturePath('files/foo.js2')]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -537,10 +535,10 @@ describe
                 );
                 const results = await eslint.lintParallel(['fixtures/files/']);
 
-                assert.strictEqual(results.length, 3);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 3);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -562,7 +560,7 @@ describe
                 );
                 const results = await eslint.lintParallel(['.']);
 
-                assert.strictEqual(results.length, 2);
+                assert.equal(results.length, 2);
                 assert
                 (
                     results.every(result => /^\.[cm]?js$/u.test(extname(result.filePath))),
@@ -589,11 +587,11 @@ describe
                 );
                 const results = await eslint.lintParallel(['../*.js']);
 
-                assert.strictEqual(results.length, 2);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[1].suppressedMessages.length, 0);
+                assert.equal(results.length, 2);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[1].suppressedMessages.length, 0);
             },
         );
 
@@ -614,10 +612,10 @@ describe
                 );
                 const results = await eslint.lintParallel(['.']);
 
-                assert.strictEqual(results.length, 2);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].filePath, getFixturePath('dots-in-files/a..b.js'));
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 2);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].filePath, getFixturePath('dots-in-files/a..b.js'));
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -638,11 +636,10 @@ describe
                 );
                 const results = await eslint.lintParallel(['subdir1']);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual
-                (results[0].filePath, getFixturePath('example-app2/subdir1/a.js'));
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].filePath, getFixturePath('example-app2/subdir1/a.js'));
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -663,15 +660,11 @@ describe
                 );
                 const results = await eslint.lintParallel(['src/**/*.{js,json}']);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 1);
-                assert.strictEqual(results[0].messages[0].ruleId, 'no-console');
-                assert.strictEqual
-                (
-                    results[0].filePath,
-                    getFixturePath('{curly-path}/server/src/two.js'),
-                );
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 1);
+                assert.equal(results[0].messages[0].ruleId, 'no-console');
+                assert.equal(results[0].filePath, getFixturePath('{curly-path}/server/src/two.js'));
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -691,11 +684,11 @@ describe
                 );
                 const results = await eslint.lintParallel(['a*.js']);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].filePath, getFixturePath('promise-config', 'a.js'));
-                assert.strictEqual(results[0].messages.length, 1);
-                assert.strictEqual(results[0].messages[0].severity, 2);
-                assert.strictEqual(results[0].messages[0].ruleId, 'quotes');
+                assert.equal(results.length, 1);
+                assert.equal(results[0].filePath, getFixturePath('promise-config', 'a.js'));
+                assert.equal(results[0].messages.length, 1);
+                assert.equal(results[0].messages[0].severity, 2);
+                assert.equal(results[0].messages[0].ruleId, 'quotes');
             },
         );
 
@@ -721,16 +714,16 @@ describe
                         );
                         const results = await eslint.lintParallel(['.']);
 
-                        assert.strictEqual(results.length, 3);
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].filePath, getFixturePath('dot-files/.a.js'));
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
-                        assert.strictEqual(results[1].messages.length, 0);
-                        assert.strictEqual(results[1].filePath, getFixturePath('dot-files/.c.js'));
-                        assert.strictEqual(results[1].suppressedMessages.length, 0);
-                        assert.strictEqual(results[2].messages.length, 0);
-                        assert.strictEqual(results[2].filePath, getFixturePath('dot-files/b.js'));
-                        assert.strictEqual(results[2].suppressedMessages.length, 0);
+                        assert.equal(results.length, 3);
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].filePath, getFixturePath('dot-files/.a.js'));
+                        assert.equal(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[1].messages.length, 0);
+                        assert.equal(results[1].filePath, getFixturePath('dot-files/.c.js'));
+                        assert.equal(results[1].suppressedMessages.length, 0);
+                        assert.equal(results[2].messages.length, 0);
+                        assert.equal(results[2].filePath, getFixturePath('dot-files/b.js'));
+                        assert.equal(results[2].suppressedMessages.length, 0);
                     },
                 );
 
@@ -750,16 +743,16 @@ describe
                         );
                         const results = await eslint.lintParallel(['*.js']);
 
-                        assert.strictEqual(results.length, 3);
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].filePath, getFixturePath('dot-files/.a.js'));
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
-                        assert.strictEqual(results[1].messages.length, 0);
-                        assert.strictEqual(results[1].filePath, getFixturePath('dot-files/.c.js'));
-                        assert.strictEqual(results[1].suppressedMessages.length, 0);
-                        assert.strictEqual(results[2].messages.length, 0);
-                        assert.strictEqual(results[2].filePath, getFixturePath('dot-files/b.js'));
-                        assert.strictEqual(results[2].suppressedMessages.length, 0);
+                        assert.equal(results.length, 3);
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].filePath, getFixturePath('dot-files/.a.js'));
+                        assert.equal(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[1].messages.length, 0);
+                        assert.equal(results[1].filePath, getFixturePath('dot-files/.c.js'));
+                        assert.equal(results[1].suppressedMessages.length, 0);
+                        assert.equal(results[2].messages.length, 0);
+                        assert.equal(results[2].filePath, getFixturePath('dot-files/b.js'));
+                        assert.equal(results[2].suppressedMessages.length, 0);
                     },
                 );
 
@@ -772,10 +765,10 @@ describe
                         eslint = await ESLint.fromCLIOptions({ cwd });
                         const results = await eslint.lintParallel(['.a.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].filePath, getFixturePath('dot-files/.a.js'));
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].filePath, getFixturePath('dot-files/.a.js'));
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
             },
@@ -921,7 +914,7 @@ describe
                         );
                         const results = await eslint.lintParallel(['subdir2/*.js']);
 
-                        assert.strictEqual(results.length, 0);
+                        assert.equal(results.length, 0);
                     },
                 );
 
@@ -942,7 +935,7 @@ describe
                         );
                         const results = await eslint.lintParallel(['doesexist/*.js']);
 
-                        assert.strictEqual(results.length, 0);
+                        assert.equal(results.length, 0);
                     },
                 );
             },
@@ -972,9 +965,9 @@ describe
                         );
                         const results = await eslint.lintParallel(['target-dir']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -999,22 +992,22 @@ describe
                         );
                         const results = await eslint.lintParallel(['subdir/subsubdir']);
 
-                        assert.strictEqual(results.length, 2);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 2);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal
                         (
                             results[0].filePath,
                             getFixturePath('shallow-glob/subdir/subsubdir/broken.js'),
                         );
                         assert(results[0].messages[0].fatal, 'Fatal error expected.');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
-                        assert.strictEqual
+                        assert.equal(results[0].suppressedMessages.length, 0);
+                        assert.equal
                         (
                             results[1].filePath,
                             getFixturePath('shallow-glob/subdir/subsubdir/plain.jsx'),
                         );
-                        assert.strictEqual(results[1].messages.length, 0);
-                        assert.strictEqual(results[1].suppressedMessages.length, 0);
+                        assert.equal(results[1].messages.length, 0);
+                        assert.equal(results[1].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1039,15 +1032,15 @@ describe
                         );
                         const results = await eslint.lintParallel(['subdir']);
 
-                        assert.strictEqual(results.length, 3);
-                        assert.strictEqual(results[0].messages.length, 1);
+                        assert.equal(results.length, 3);
+                        assert.equal(results[0].messages.length, 1);
                         assert(results[0].messages[0].fatal, 'Fatal error expected.');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
-                        assert.strictEqual(results[1].messages.length, 1);
+                        assert.equal(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[1].messages.length, 1);
                         assert(results[0].messages[0].fatal, 'Fatal error expected.');
-                        assert.strictEqual(results[1].suppressedMessages.length, 0);
-                        assert.strictEqual(results[2].messages.length, 0);
-                        assert.strictEqual(results[2].suppressedMessages.length, 0);
+                        assert.equal(results[1].suppressedMessages.length, 0);
+                        assert.equal(results[2].messages.length, 0);
+                        assert.equal(results[2].suppressedMessages.length, 0);
                     },
                 );
             },
@@ -1070,13 +1063,13 @@ describe
                 );
                 const results = await eslint.lintParallel(['fixtures/files/*']);
 
-                assert.strictEqual(results.length, 3);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[2].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
-                assert.strictEqual(results[1].suppressedMessages.length, 0);
-                assert.strictEqual(results[2].suppressedMessages.length, 0);
+                assert.equal(results.length, 3);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[2].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
+                assert.equal(results[1].suppressedMessages.length, 0);
+                assert.equal(results[2].suppressedMessages.length, 0);
             },
         );
 
@@ -1097,13 +1090,13 @@ describe
                 );
                 const results = await eslint.lintParallel(['fixtures/files/*']);
 
-                assert.strictEqual(results.length, 3);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[2].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
-                assert.strictEqual(results[1].suppressedMessages.length, 0);
-                assert.strictEqual(results[2].suppressedMessages.length, 0);
+                assert.equal(results.length, 3);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[2].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
+                assert.equal(results[1].suppressedMessages.length, 0);
+                assert.equal(results[2].suppressedMessages.length, 0);
             },
         );
 
@@ -1127,13 +1120,13 @@ describe
                     );
                     const results = await eslint.lintParallel(['fixtures\\files\\*']);
 
-                    assert.strictEqual(results.length, 3);
-                    assert.strictEqual(results[0].messages.length, 0);
-                    assert.strictEqual(results[1].messages.length, 0);
-                    assert.strictEqual(results[2].messages.length, 0);
-                    assert.strictEqual(results[0].suppressedMessages.length, 0);
-                    assert.strictEqual(results[1].suppressedMessages.length, 0);
-                    assert.strictEqual(results[2].suppressedMessages.length, 0);
+                    assert.equal(results.length, 3);
+                    assert.equal(results[0].messages.length, 0);
+                    assert.equal(results[1].messages.length, 0);
+                    assert.equal(results[2].messages.length, 0);
+                    assert.equal(results[0].suppressedMessages.length, 0);
+                    assert.equal(results[1].suppressedMessages.length, 0);
+                    assert.equal(results[2].suppressedMessages.length, 0);
                 },
             );
         }
@@ -1180,15 +1173,15 @@ describe
                         'directory. Use ignore pattern "!**/node_modules/" to disable file ' +
                         'ignore settings or use "--no-warn-ignored" to suppress this warning.';
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual(results[0].messages[0].message, expectedMsg);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal(results[0].messages[0].message, expectedMsg);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1208,15 +1201,15 @@ describe
                         'directory. Use ignore pattern "!**/node_modules/" to disable file ' +
                         'ignore settings or use "--no-warn-ignored" to suppress this warning.';
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual(results[0].messages[0].message, expectedMsg);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal(results[0].messages[0].message, expectedMsg);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1240,15 +1233,15 @@ describe
                         'disable file ignore settings or use "--no-warn-ignored" to suppress ' +
                         'this warning.';
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual(results[0].messages[0].message, expectedMsg);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal(results[0].messages[0].message, expectedMsg);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1269,7 +1262,7 @@ describe
                         );
                         const results = await eslint.lintParallel(['node_modules/foo.js']);
 
-                        assert.strictEqual(results.length, 0);
+                        assert.equal(results.length, 0);
                     },
                 );
 
@@ -1289,12 +1282,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['hidden/.hiddenfolder/*.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 1);
-                        assert.strictEqual(results[0].warningCount, 0);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 1);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 1);
+                        assert.equal(results[0].warningCount, 0);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 1);
+                        assert.equal(results[0].fixableWarningCount, 0);
                     },
                 );
 
@@ -1388,12 +1381,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['.']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 0);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 0);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
                     },
                 );
 
@@ -1468,22 +1461,22 @@ describe
                         const filePath = getFixturePath('passing.js');
                         const results = await eslint.lintParallel([filePath]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, filePath);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, filePath);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal
                         (
                             results[0].messages[0].message,
                             'File ignored because of a matching ignore pattern. Use ' +
                             '"--no-ignore" to disable file ignore settings or use ' +
                             '"--no-warn-ignored" to suppress this warning.',
                         );
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1497,20 +1490,20 @@ describe
                         const filePath = getFixturePath('files', 'foo.js2');
                         const results = await eslint.lintParallel([filePath]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, filePath);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, filePath);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal
                         (
                             results[0].messages[0].message,
                             'File ignored because no matching configuration was supplied.',
                         );
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1525,20 +1518,20 @@ describe
                         const filePath = getFixturePath('passing.js');
                         const results = await eslint.lintParallel([filePath]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, filePath);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, filePath);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal
                         (
                             results[0].messages[0].message,
                             'File ignored because outside of base path.',
                         );
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1560,7 +1553,7 @@ describe
                         const filePath = getFixturePath('passing.js');
                         const results = await eslint.lintParallel([filePath]);
 
-                        assert.strictEqual(results.length, 0);
+                        assert.equal(results.length, 0);
                     },
                 );
 
@@ -1581,22 +1574,22 @@ describe
                         const filePath = getFixturePath('dot-files/.a.js');
                         const results = await eslint.lintParallel([filePath]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, filePath);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, filePath);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal
                         (
                             results[0].messages[0].message,
                             'File ignored because of a matching ignore pattern. Use ' +
                             '"--no-ignore" to disable file ignore settings or use ' +
                             '"--no-warn-ignored" to suppress this warning.',
                         );
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual(results[0].fatalErrorCount, 0);
-                        assert.strictEqual(results[0].fixableErrorCount, 0);
-                        assert.strictEqual(results[0].fixableWarningCount, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].fatalErrorCount, 0);
+                        assert.equal(results[0].fixableErrorCount, 0);
+                        assert.equal(results[0].fixableWarningCount, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1619,13 +1612,13 @@ describe
                         const filePath = getFixturePath('undef.js');
                         const results = await eslint.lintParallel([filePath]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, filePath);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].ruleId, 'no-undef');
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, filePath);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].ruleId, 'no-undef');
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -1645,8 +1638,8 @@ describe
                         );
                         const results = await eslint.lintParallel(['**/*.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal
                         (results[0].filePath, getFixturePath('ignores-relative/subdir/a.js'));
                     },
                 );
@@ -1676,13 +1669,13 @@ describe
                             /All files matched by 'subdir\/subsubdir\/\*\*' are ignored\./u,
                         );
                         const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal
                         (
                             results[0].filePath,
                             getFixturePath('ignores-directory/subdir/subsubdir/a.js'),
                         );
-                        assert.strictEqual(results[0].warningCount, 1);
+                        assert.equal(results[0].warningCount, 1);
                         assert
                         (
                             results[0].messages[0].message.startsWith('File ignored'),
@@ -1711,13 +1704,13 @@ describe
                             /All files matched by 'subdir\/\*\*\/\*\.js' are ignored\./u,
                         );
                         const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal
                         (
                             results[0].filePath,
                             getFixturePath('ignores-subdirectory/subdir/subsubdir/a.js'),
                         );
-                        assert.strictEqual(results[0].warningCount, 1);
+                        assert.equal(results[0].warningCount, 1);
                         assert
                         (
                             results[0].messages[0].message.startsWith('File ignored'),
@@ -1756,11 +1749,11 @@ describe
                         );
                         const results = await eslint.lintParallel(['*.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal
                         (results[0].filePath, getFixturePath('ignores-self/eslint.config.js'));
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 0);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 0);
                     },
                 );
 
@@ -1785,11 +1778,10 @@ describe
                         );
                         const results = await eslint.lintParallel(['a.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 1);
-                        assert.strictEqual
-                        (results[0].filePath, getFixturePath('ignores-relative/a.js'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 1);
+                        assert.equal(results[0].filePath, getFixturePath('ignores-relative/a.js'));
                     },
                 );
 
@@ -1813,10 +1805,10 @@ describe
                         );
                         const results = await eslint.lintParallel(['subdir/**/*.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 0);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 0);
+                        assert.equal
                         (
                             results[0].filePath,
                             getFixturePath('ignores-directory/subdir/subsubdir/a.js'),
@@ -1849,17 +1841,17 @@ describe
                         );
                         const results = await eslint.lintParallel(['.']);
 
-                        assert.strictEqual(results.length, 2);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 0);
-                        assert.strictEqual
+                        assert.equal(results.length, 2);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 0);
+                        assert.equal
                         (
                             results[0].filePath,
                             getFixturePath('ignores-directory-deep/tests/format/jsfmt.spec.js'),
                         );
-                        assert.strictEqual(results[1].errorCount, 0);
-                        assert.strictEqual(results[1].warningCount, 0);
-                        assert.strictEqual
+                        assert.equal(results[1].errorCount, 0);
+                        assert.equal(results[1].warningCount, 0);
+                        assert.equal
                         (
                             results[1].filePath,
                             getFixturePath
@@ -1883,17 +1875,17 @@ describe
                         );
                         const results = await eslint.lintParallel(['.']);
 
-                        assert.strictEqual(results.length, 2);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 0);
-                        assert.strictEqual
+                        assert.equal(results.length, 2);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 0);
+                        assert.equal
                         (
                             results[0].filePath,
                             getFixturePath('ignores-directory-deep/tests/format/foo.js'),
                         );
-                        assert.strictEqual(results[1].errorCount, 0);
-                        assert.strictEqual(results[1].warningCount, 0);
-                        assert.strictEqual
+                        assert.equal(results[1].errorCount, 0);
+                        assert.equal(results[1].warningCount, 0);
+                        assert.equal
                         (
                             results[1].filePath,
                             getFixturePath('ignores-directory-deep/tests/format/jsfmt.spec.js'),
@@ -1921,10 +1913,10 @@ describe
                         );
                         const results = await eslint.lintParallel(['.']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].errorCount, 0);
-                        assert.strictEqual(results[0].warningCount, 0);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].errorCount, 0);
+                        assert.equal(results[0].warningCount, 0);
+                        assert.equal
                         (
                             results[0].filePath,
                             getFixturePath('ignores-directory-deep/tests/format/jsfmt.spec.js'),
@@ -2009,20 +2001,18 @@ describe
                         );
                         const results = await eslint.lintParallel(['curly-files']);
 
-                        assert.strictEqual(results.length, 2);
-                        assert.strictEqual
-                        (results[0].filePath, getFixturePath('curly-files', 'a.js'));
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
-                        assert.strictEqual(results[0].messages[0].messageId, 'undef');
+                        assert.equal(results.length, 2);
+                        assert.equal(results[0].filePath, getFixturePath('curly-files', 'a.js'));
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(results[0].messages[0].messageId, 'undef');
                         assert.match(results[0].messages[0].message, /'bar'/u);
-                        assert.strictEqual
-                        (results[1].filePath, getFixturePath('curly-files', 'b.js'));
-                        assert.strictEqual(results[1].messages.length, 1);
-                        assert.strictEqual(results[1].messages[0].severity, 1);
-                        assert.strictEqual(results[1].messages[0].ruleId, 'no-undef');
-                        assert.strictEqual(results[1].messages[0].messageId, 'undef');
+                        assert.equal(results[1].filePath, getFixturePath('curly-files', 'b.js'));
+                        assert.equal(results[1].messages.length, 1);
+                        assert.equal(results[1].messages[0].severity, 1);
+                        assert.equal(results[1].messages[0].ruleId, 'no-undef');
+                        assert.equal(results[1].messages[0].messageId, 'undef');
                         assert.match(results[1].messages[0].message, /'baz'/u);
                     },
                 );
@@ -2046,21 +2036,19 @@ describe
                         );
                         const results = await eslint.lintParallel(['**/a.js']);
 
-                        assert.strictEqual(results.length, 2);
-                        assert.strictEqual
+                        assert.equal(results.length, 2);
+                        assert.equal
                         (results[0].filePath, getFixturePath('ignores-relative', 'a.js'));
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-program/no-program');
-                        assert.strictEqual
-                        (results[0].messages[0].message, 'Program is disallowed.');
-                        assert.strictEqual
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal(results[0].messages[0].ruleId, 'no-program/no-program');
+                        assert.equal(results[0].messages[0].message, 'Program is disallowed.');
+                        assert.equal
                         (results[1].filePath, getFixturePath('ignores-relative', 'subdir', 'a.js'));
-                        assert.strictEqual(results[1].messages.length, 1);
-                        assert.strictEqual(results[1].messages[0].severity, 1);
-                        assert.strictEqual(results[1].messages[0].ruleId, 'no-program/no-program');
-                        assert.strictEqual
-                        (results[1].messages[0].message, 'Program is disallowed.');
+                        assert.equal(results[1].messages.length, 1);
+                        assert.equal(results[1].messages[0].severity, 1);
+                        assert.equal(results[1].messages[0].ruleId, 'no-program/no-program');
+                        assert.equal(results[1].messages[0].message, 'Program is disallowed.');
                     },
                 );
 
@@ -2083,14 +2071,13 @@ describe
                         );
                         const results = await eslint.lintParallel(['**/a.js']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal
                         (results[0].filePath, getFixturePath('ignores-relative', 'a.js'));
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-program/no-program');
-                        assert.strictEqual
-                        (results[0].messages[0].message, 'Program is disallowed.');
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal(results[0].messages[0].ruleId, 'no-program/no-program');
+                        assert.equal(results[0].messages[0].message, 'Program is disallowed.');
                     },
                 );
             },
@@ -2112,13 +2099,13 @@ describe
                 );
                 const results = await eslint.lintParallel(['fixtures/files/*.?s*']);
 
-                assert.strictEqual(results.length, 3);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[1].suppressedMessages.length, 0);
-                assert.strictEqual(results[2].messages.length, 0);
-                assert.strictEqual(results[2].suppressedMessages.length, 0);
+                assert.equal(results.length, 3);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[1].suppressedMessages.length, 0);
+                assert.equal(results[2].messages.length, 0);
+                assert.equal(results[2].suppressedMessages.length, 0);
             },
         );
 
@@ -2139,16 +2126,16 @@ describe
                 );
                 const results = await eslint.lintParallel([getFixturePath('single-quoted.js')]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 1);
-                assert.strictEqual(results[0].messages[0].ruleId, 'quotes');
-                assert.strictEqual(results[0].messages[0].severity, 2);
-                assert.strictEqual(results[0].errorCount, 1);
-                assert.strictEqual(results[0].warningCount, 0);
-                assert.strictEqual(results[0].fatalErrorCount, 0);
-                assert.strictEqual(results[0].fixableErrorCount, 1);
-                assert.strictEqual(results[0].fixableWarningCount, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 1);
+                assert.equal(results[0].messages[0].ruleId, 'quotes');
+                assert.equal(results[0].messages[0].severity, 2);
+                assert.equal(results[0].errorCount, 1);
+                assert.equal(results[0].warningCount, 0);
+                assert.equal(results[0].fatalErrorCount, 0);
+                assert.equal(results[0].fixableErrorCount, 1);
+                assert.equal(results[0].fixableWarningCount, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -2173,48 +2160,48 @@ describe
                 const formattersDir = getFixturePath('formatters');
                 const results = await eslint.lintParallel([formattersDir]);
 
-                assert.strictEqual(results.length, 5);
-                assert.strictEqual(relative(formattersDir, results[0].filePath), 'async.js');
-                assert.strictEqual(results[0].errorCount, 0);
-                assert.strictEqual(results[0].warningCount, 0);
-                assert.strictEqual(results[0].fatalErrorCount, 0);
-                assert.strictEqual(results[0].fixableErrorCount, 0);
-                assert.strictEqual(results[0].fixableWarningCount, 0);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
-                assert.strictEqual(relative(formattersDir, results[1].filePath), 'broken.js');
-                assert.strictEqual(results[1].errorCount, 0);
-                assert.strictEqual(results[1].warningCount, 0);
-                assert.strictEqual(results[1].fatalErrorCount, 0);
-                assert.strictEqual(results[1].fixableErrorCount, 0);
-                assert.strictEqual(results[1].fixableWarningCount, 0);
-                assert.strictEqual(results[1].messages.length, 0);
-                assert.strictEqual(results[1].suppressedMessages.length, 0);
-                assert.strictEqual(relative(formattersDir, results[2].filePath), 'cwd.js');
-                assert.strictEqual(results[2].errorCount, 0);
-                assert.strictEqual(results[2].warningCount, 0);
-                assert.strictEqual(results[2].fatalErrorCount, 0);
-                assert.strictEqual(results[2].fixableErrorCount, 0);
-                assert.strictEqual(results[2].fixableWarningCount, 0);
-                assert.strictEqual(results[2].messages.length, 0);
-                assert.strictEqual(results[2].suppressedMessages.length, 0);
-                assert.strictEqual(relative(formattersDir, results[3].filePath), 'simple.js');
-                assert.strictEqual(results[3].errorCount, 0);
-                assert.strictEqual(results[3].warningCount, 0);
-                assert.strictEqual(results[3].fatalErrorCount, 0);
-                assert.strictEqual(results[3].fixableErrorCount, 0);
-                assert.strictEqual(results[3].fixableWarningCount, 0);
-                assert.strictEqual(results[3].messages.length, 0);
-                assert.strictEqual(results[3].suppressedMessages.length, 0);
-                assert.strictEqual
+                assert.equal(results.length, 5);
+                assert.equal(relative(formattersDir, results[0].filePath), 'async.js');
+                assert.equal(results[0].errorCount, 0);
+                assert.equal(results[0].warningCount, 0);
+                assert.equal(results[0].fatalErrorCount, 0);
+                assert.equal(results[0].fixableErrorCount, 0);
+                assert.equal(results[0].fixableWarningCount, 0);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
+                assert.equal(relative(formattersDir, results[1].filePath), 'broken.js');
+                assert.equal(results[1].errorCount, 0);
+                assert.equal(results[1].warningCount, 0);
+                assert.equal(results[1].fatalErrorCount, 0);
+                assert.equal(results[1].fixableErrorCount, 0);
+                assert.equal(results[1].fixableWarningCount, 0);
+                assert.equal(results[1].messages.length, 0);
+                assert.equal(results[1].suppressedMessages.length, 0);
+                assert.equal(relative(formattersDir, results[2].filePath), 'cwd.js');
+                assert.equal(results[2].errorCount, 0);
+                assert.equal(results[2].warningCount, 0);
+                assert.equal(results[2].fatalErrorCount, 0);
+                assert.equal(results[2].fixableErrorCount, 0);
+                assert.equal(results[2].fixableWarningCount, 0);
+                assert.equal(results[2].messages.length, 0);
+                assert.equal(results[2].suppressedMessages.length, 0);
+                assert.equal(relative(formattersDir, results[3].filePath), 'simple.js');
+                assert.equal(results[3].errorCount, 0);
+                assert.equal(results[3].warningCount, 0);
+                assert.equal(results[3].fatalErrorCount, 0);
+                assert.equal(results[3].fixableErrorCount, 0);
+                assert.equal(results[3].fixableWarningCount, 0);
+                assert.equal(results[3].messages.length, 0);
+                assert.equal(results[3].suppressedMessages.length, 0);
+                assert.equal
                 (relative(formattersDir, results[4].filePath), join('test', 'simple.js'));
-                assert.strictEqual(results[4].errorCount, 0);
-                assert.strictEqual(results[4].warningCount, 0);
-                assert.strictEqual(results[4].fatalErrorCount, 0);
-                assert.strictEqual(results[4].fixableErrorCount, 0);
-                assert.strictEqual(results[4].fixableWarningCount, 0);
-                assert.strictEqual(results[4].messages.length, 0);
-                assert.strictEqual(results[4].suppressedMessages.length, 0);
+                assert.equal(results[4].errorCount, 0);
+                assert.equal(results[4].warningCount, 0);
+                assert.equal(results[4].fatalErrorCount, 0);
+                assert.equal(results[4].fixableErrorCount, 0);
+                assert.equal(results[4].fixableWarningCount, 0);
+                assert.equal(results[4].messages.length, 0);
+                assert.equal(results[4].suppressedMessages.length, 0);
             },
         );
 
@@ -2233,9 +2220,9 @@ describe
                 );
                 const results = await eslint.lintParallel([getFixturePath('globals-browser.js')]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0, 'Should have no messages.');
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0, 'Should have no messages.');
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -2259,9 +2246,9 @@ describe
                 );
                 const results = await eslint.lintParallel([getFixturePath('globals-browser.js')]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -2281,9 +2268,9 @@ describe
                 );
                 const results = await eslint.lintParallel([getFixturePath('globals-node.js')]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0, 'Should have no messages.');
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0, 'Should have no messages.');
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -2306,19 +2293,19 @@ describe
                 const passFilePath = getFixturePath('passing.js');
                 let results = await eslint.lintParallel([failFilePath]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].filePath, failFilePath);
-                assert.strictEqual(results[0].messages.length, 1);
-                assert.strictEqual(results[0].messages[0].ruleId, 'semi');
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
-                assert.strictEqual(results[0].messages[0].severity, 2);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].filePath, failFilePath);
+                assert.equal(results[0].messages.length, 1);
+                assert.equal(results[0].messages[0].ruleId, 'semi');
+                assert.equal(results[0].suppressedMessages.length, 0);
+                assert.equal(results[0].messages[0].severity, 2);
 
                 results = await eslint.lintParallel([passFilePath]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].filePath, passFilePath);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].filePath, passFilePath);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -2338,9 +2325,9 @@ describe
                 );
                 const results = await eslint.lintParallel([getFixturePath('shebang.js')]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].messages.length, 0, 'Should have lint messages.');
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].messages.length, 0, 'Should have lint messages.');
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -2360,10 +2347,10 @@ describe
                 const filePath = getFixturePath('missing-semicolon.js');
                 const results = await eslint.lintParallel([filePath]);
 
-                assert.strictEqual(results.length, 1);
-                assert.strictEqual(results[0].filePath, filePath);
-                assert.strictEqual(results[0].messages.length, 0);
-                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                assert.equal(results.length, 1);
+                assert.equal(results[0].filePath, filePath);
+                assert.equal(results[0].messages.length, 0);
+                assert.equal(results[0].suppressedMessages.length, 0);
             },
         );
 
@@ -2392,7 +2379,7 @@ describe
                         );
                         const results = await eslint.lintParallel(['lib/eslint-*.js']);
 
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (
                             results[0].usedDeprecatedRules,
                             [
@@ -2422,7 +2409,7 @@ describe
                         );
                         const results = await eslint.lintParallel(['lib/eslint-*.js']);
 
-                        assert.deepStrictEqual(results[0].usedDeprecatedRules, []);
+                        assert.deepEqual(results[0].usedDeprecatedRules, []);
                     },
                 );
 
@@ -2442,7 +2429,7 @@ describe
                         );
                         const results = await eslint.lintParallel(['lib/eslint-*.js']);
 
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (
                             results[0].usedDeprecatedRules,
                             [{ ruleId: 'indent-legacy', replacedBy: ['indent'] }],
@@ -2477,7 +2464,7 @@ describe
                         const results = await eslint.lintParallel([inputPath]);
                         const expectedOutput = await readFile(outputPath, 'utf8');
 
-                        assert.strictEqual(results[0].output, expectedOutput);
+                        assert.equal(results[0].output, expectedOutput);
                     },
                 );
 
@@ -2500,7 +2487,7 @@ describe
                         const results = await eslint.lintParallel([inputPath]);
                         const expectedOutput = await readFile(outputPath, 'utf8');
 
-                        assert.strictEqual(results[0].output, expectedOutput);
+                        assert.equal(results[0].output, expectedOutput);
                     },
                 );
 
@@ -2540,7 +2527,7 @@ describe
                         const results = await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
                         results.forEach(convertCRLF);
 
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (
                             results,
                             [
@@ -2738,10 +2725,10 @@ describe
                         await eslint.lintParallel
                         ([getFixturePath('rules', 'test/test-custom-rule.js')]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2, 'Expected two messages.');
-                        assert.strictEqual(results[0].messages[0].ruleId, 'example/example-rule');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2, 'Expected two messages.');
+                        assert.equal(results[0].messages[0].ruleId, 'example/example-rule');
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -2763,10 +2750,10 @@ describe
                         await eslint.lintParallel
                         ([getFixturePath('rules', 'test', 'test-custom-rule.js')]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'example/example-rule');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'example/example-rule');
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -2790,10 +2777,10 @@ describe
                         await eslint.lintParallel
                         ([getFixturePath('rules', 'test', 'test-custom-rule.js')]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'test/example-rule');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'test/example-rule');
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
             },
@@ -3067,7 +3054,7 @@ describe
 
                         for (const { errorCount, warningCount, readFileCalled } of results)
                         {
-                            assert.strictEqual
+                            assert.equal
                             (
                                 errorCount + warningCount,
                                 0,
@@ -3109,14 +3096,14 @@ describe
                             'ESLint should have read the file again because it\'s considered ' +
                             'changed because the config changed',
                         );
-                        assert.strictEqual
+                        assert.equal
                         (
                             newResult.errorCount,
                             1,
                             'since configuration changed the cache should have not been used and ' +
                             'one error should have been reported',
                         );
-                        assert.strictEqual(newResult.messages[0].ruleId, 'no-console');
+                        assert.equal(newResult.messages[0].ruleId, 'no-console');
                         assert
                         (
                             await fileExists(cacheFilePath),
@@ -3190,7 +3177,7 @@ describe
                         // assert the file was not processed because the cache was used
                         results[0].readFileCalled = false;
 
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (results, cachedResults, 'the result should have been the same');
                     },
                 );
@@ -3319,13 +3306,13 @@ describe
                         const result = await eslint.lintParallel([badFile, goodFile]);
                         const [badFileResult, goodFileResult] = result;
 
-                        assert.notStrictEqual
+                        assert.notEqual
                         (
                             badFileResult.errorCount + badFileResult.warningCount,
                             0,
                             'the bad file should have some lint errors or warnings',
                         );
-                        assert.strictEqual
+                        assert.equal
                         (
                             goodFileResult.errorCount + badFileResult.warningCount,
                             0,
@@ -3340,13 +3327,13 @@ describe
                         const fileCache = fCache.createFromFile(cacheFilePath);
                         const { cache } = fileCache;
 
-                        assert.strictEqual
+                        assert.equal
                         (
                             typeof cache.getKey(goodFile),
                             'object',
                             'the entry for the good file should have been in the cache',
                         );
-                        assert.strictEqual
+                        assert.equal
                         (
                             typeof cache.getKey(badFile),
                             'object',
@@ -3355,7 +3342,7 @@ describe
 
                         const cachedResult = await eslint.lintParallel([badFile, goodFile]);
 
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (result, cachedResult, 'result should be the same with or without cache');
                     },
                 );
@@ -3395,7 +3382,7 @@ describe
                         const fileCache = fCache.createFromFile(cacheFilePath);
                         let { cache } = fileCache;
 
-                        assert.strictEqual
+                        assert.equal
                         (
                             typeof cache.getKey(toBeDeletedFile),
                             'object',
@@ -3412,7 +3399,7 @@ describe
                         await eslint.lintParallel([badFile, goodFile]);
                         cache = JSON.parse(await readFile(cacheFilePath));
 
-                        assert.strictEqual
+                        assert.equal
                         (
                             typeof cache[0][toBeDeletedFile],
                             'undefined',
@@ -3420,13 +3407,13 @@ describe
                             'cache',
                         );
                         // make sure that the previos assertion checks the right place
-                        assert.notStrictEqual
+                        assert.notEqual
                         (
                             typeof cache[0][badFile],
                             'undefined',
                             'the entry for the bad file should have been in the cache',
                         );
-                        assert.notStrictEqual
+                        assert.notEqual
                         (
                             typeof cache[0][goodFile],
                             'undefined',
@@ -3471,7 +3458,7 @@ describe
                         let fileCache = fCache.createFromFile(cacheFilePath);
                         let { cache } = fileCache;
 
-                        assert.strictEqual
+                        assert.equal
                         (
                             typeof cache.getKey(testFile2),
                             'object',
@@ -3487,7 +3474,7 @@ describe
                         fileCache = fCache.createFromFile(cacheFilePath);
                         ({ cache } = fileCache);
 
-                        assert.strictEqual
+                        assert.equal
                         (
                             typeof cache.getKey(testFile2),
                             'object',
@@ -3637,7 +3624,7 @@ describe
 
                         const cachedResult = await eslint.lintParallel([badFile, goodFile]);
 
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (result, cachedResult, 'result should be the same with or without cache');
                     },
                 );
@@ -3791,7 +3778,7 @@ describe
                             );
                             // if the lint result contains `source`, it should be stored as `null`
                             // in the cache file
-                            assert.strictEqual
+                            assert.equal
                             (
                                 descriptor.meta.results.source,
                                 null,
@@ -4043,9 +4030,9 @@ describe
                         await eslint.lintParallel
                         ([getFixturePath('processors', 'test', 'test-processor.txt')]);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4067,10 +4054,10 @@ describe
                         await eslint.lintParallel
                         ([getFixturePath('processors', 'test', 'test-processor.txt')]);
 
-                        assert.strictEqual
+                        assert.equal
                         (results[0].messages[0].message, '\'b\' is defined but never used.');
-                        assert.strictEqual(results[0].messages[0].ruleId, 'post-processed');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].messages[0].ruleId, 'post-processed');
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
             },
@@ -4296,13 +4283,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['test.md']);
 
-                        assert.strictEqual(results.length, 1, 'Should have one result.');
-                        assert.strictEqual
-                        (results[0].messages.length, 1, 'Should have one message.');
-                        assert.strictEqual(results[0].messages[0].ruleId, 'semi');
-                        assert.strictEqual
+                        assert.equal(results.length, 1, 'Should have one result.');
+                        assert.equal(results[0].messages.length, 1, 'Should have one message.');
+                        assert.equal(results[0].messages[0].ruleId, 'semi');
+                        assert.equal
                         (results[0].messages[0].line, 2, 'Message should be on line 2.');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4358,17 +4344,16 @@ describe
                         );
                         const results = await eslint.lintParallel(['test.md']);
 
-                        assert.strictEqual(results.length, 1, 'Should have one result.');
-                        assert.strictEqual
-                        (results[0].messages.length, 2, 'Should have two messages.');
-                        assert.strictEqual(results[0].messages[0].ruleId, 'semi'); // JS block
-                        assert.strictEqual
+                        assert.equal(results.length, 1, 'Should have one result.');
+                        assert.equal(results[0].messages.length, 2, 'Should have two messages.');
+                        assert.equal(results[0].messages[0].ruleId, 'semi'); // JS block
+                        assert.equal
                         (results[0].messages[0].line, 2, 'First error should be on line 2');
                         // JS block in HTML block
-                        assert.strictEqual(results[0].messages[1].ruleId, 'semi');
-                        assert.strictEqual
+                        assert.equal(results[0].messages[1].ruleId, 'semi');
+                        assert.equal
                         (results[0].messages[1].line, 7, 'Second error should be on line 7.');
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4425,10 +4410,10 @@ describe
                         );
                         const results = await eslint.lintParallel(['test.md']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 0);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
-                        assert.strictEqual
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
+                        assert.equal
                         (
                             results[0].output,
                             unIndent`
@@ -4508,13 +4493,13 @@ describe
                         );
                         const results = await eslint.lintParallel(['test.md']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'semi');
-                        assert.strictEqual(results[0].messages[0].line, 2);
-                        assert.strictEqual(results[0].messages[1].ruleId, 'no-console');
-                        assert.strictEqual(results[0].messages[1].line, 7);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'semi');
+                        assert.equal(results[0].messages[0].line, 2);
+                        assert.equal(results[0].messages[1].ruleId, 'no-console');
+                        assert.equal(results[0].messages[1].line, 7);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4582,15 +4567,15 @@ describe
                         );
                         const results = await eslint.lintParallel(['test.md']);
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 3);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'semi');
-                        assert.strictEqual(results[0].messages[0].line, 2);
-                        assert.strictEqual(results[0].messages[1].ruleId, 'no-console');
-                        assert.strictEqual(results[0].messages[1].line, 7);
-                        assert.strictEqual(results[0].messages[2].ruleId, 'no-console');
-                        assert.strictEqual(results[0].messages[2].line, 10);
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 3);
+                        assert.equal(results[0].messages[0].ruleId, 'semi');
+                        assert.equal(results[0].messages[0].line, 2);
+                        assert.equal(results[0].messages[1].ruleId, 'no-console');
+                        assert.equal(results[0].messages[1].line, 7);
+                        assert.equal(results[0].messages[2].ruleId, 'no-console');
+                        assert.equal(results[0].messages[2].line, 10);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4695,7 +4680,7 @@ describe
                         const results = await eslint.lintParallel(['[ab].js']);
                         const filenames = results.map(r => basename(r.filePath));
 
-                        assert.deepStrictEqual(filenames, ['[ab].js']);
+                        assert.deepEqual(filenames, ['[ab].js']);
                     },
                 );
 
@@ -4731,7 +4716,7 @@ describe
                         const results = await eslint.lintParallel(['[ab].js']);
                         const filenames = results.map(r => basename(r.filePath));
 
-                        assert.deepStrictEqual(filenames, ['a.js', 'b.js']);
+                        assert.deepEqual(filenames, ['a.js', 'b.js']);
                     },
                 );
             },
@@ -4788,8 +4773,8 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 1);
-                        assert.strictEqual
+                        assert.equal(messages.length, 1);
+                        assert.equal
                         (
                             messages[0].message,
                             '\'/* globals foo */\' has no effect because you have ' +
@@ -4854,15 +4839,15 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 1);
-                        assert.strictEqual(messages[0].severity, 2);
-                        assert.strictEqual
+                        assert.equal(messages.length, 1);
+                        assert.equal(messages[0].severity, 2);
+                        assert.equal
                         (
                             messages[0].message,
                             'Unused eslint-disable directive (no problems were reported from ' +
                             '\'eqeqeq\').',
                         );
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4899,15 +4884,15 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 1);
-                        assert.strictEqual(messages[0].severity, 2);
-                        assert.strictEqual
+                        assert.equal(messages.length, 1);
+                        assert.equal(messages[0].severity, 2);
+                        assert.equal
                         (
                             messages[0].message,
                             'Unused eslint-disable directive (no problems were reported from ' +
                             '\'eqeqeq\').',
                         );
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4944,15 +4929,15 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 1);
-                        assert.strictEqual(messages[0].severity, 1);
-                        assert.strictEqual
+                        assert.equal(messages.length, 1);
+                        assert.equal(messages[0].severity, 1);
+                        assert.equal
                         (
                             messages[0].message,
                             'Unused eslint-disable directive (no problems were reported from ' +
                             '\'eqeqeq\').',
                         );
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -4989,15 +4974,15 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 1);
-                        assert.strictEqual(messages[0].severity, 1);
-                        assert.strictEqual
+                        assert.equal(messages.length, 1);
+                        assert.equal(messages[0].severity, 1);
+                        assert.equal
                         (
                             messages[0].message,
                             'Unused eslint-disable directive (no problems were reported from ' +
                             '\'eqeqeq\').',
                         );
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -5034,15 +5019,15 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 1);
-                        assert.strictEqual(messages[0].severity, 1);
-                        assert.strictEqual
+                        assert.equal(messages.length, 1);
+                        assert.equal(messages[0].severity, 1);
+                        assert.equal
                         (
                             messages[0].message,
                             'Unused eslint-disable directive (no problems were reported from ' +
                             '\'eqeqeq\').',
                         );
-                        assert.strictEqual(results[0].suppressedMessages.length, 0);
+                        assert.equal(results[0].suppressedMessages.length, 0);
                     },
                 );
 
@@ -5079,7 +5064,7 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 0);
+                        assert.equal(messages.length, 0);
                     },
                 );
 
@@ -5116,7 +5101,7 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 0);
+                        assert.equal(messages.length, 0);
                     },
                 );
 
@@ -5153,7 +5138,7 @@ describe
                         const results = await eslint.lintParallel(['test.js']);
                         const [{ messages }] = results;
 
-                        assert.strictEqual(messages.length, 0);
+                        assert.equal(messages.length, 0);
                     },
                 );
 
@@ -5196,7 +5181,7 @@ describe
                                 const results = await eslint.lintParallel(['test.js']);
                                 const [{ messages }] = results;
 
-                                assert.strictEqual(messages.length, 0);
+                                assert.equal(messages.length, 0);
                             },
                         );
 
@@ -5234,15 +5219,15 @@ describe
                                 const results = await eslint.lintParallel(['test.js']);
                                 const [{ messages }] = results;
 
-                                assert.strictEqual(messages.length, 1);
-                                assert.strictEqual(messages[0].severity, 2);
-                                assert.strictEqual
+                                assert.equal(messages.length, 1);
+                                assert.equal(messages[0].severity, 2);
+                                assert.equal
                                 (
                                     messages[0].message,
                                     'Unused eslint-disable directive (no problems were reported ' +
                                     'from \'eqeqeq\').',
                                 );
-                                assert.strictEqual(results[0].suppressedMessages.length, 0);
+                                assert.equal(results[0].suppressedMessages.length, 0);
                             },
                         );
                     },
@@ -5290,10 +5275,10 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5313,10 +5298,10 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 1);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 1);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5337,8 +5322,8 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 0);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 0);
                     },
                 );
 
@@ -5358,10 +5343,10 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
             },
@@ -5393,12 +5378,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5420,12 +5404,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5447,12 +5430,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5495,12 +5477,11 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5543,12 +5524,11 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5592,12 +5572,11 @@ describe
 
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5657,13 +5636,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5723,13 +5701,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5783,13 +5760,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5843,13 +5819,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5909,13 +5884,12 @@ describe
 
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -5974,13 +5948,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6039,13 +6012,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6104,13 +6076,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6170,13 +6141,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6236,13 +6206,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6305,13 +6274,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6374,13 +6342,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 2);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[1].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6401,12 +6368,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6427,12 +6393,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6455,11 +6420,11 @@ describe
 
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual(await eslint.findConfigFile(), config);
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), config);
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6480,12 +6445,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6507,12 +6471,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6534,12 +6497,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6560,12 +6522,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6587,12 +6548,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6614,12 +6574,11 @@ describe
                         );
                         const results = await eslint.lintParallel('foo.js');
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
 
@@ -6657,7 +6616,7 @@ describe
                             },
                         );
 
-                        assert.strictEqual
+                        assert.equal
                         (await eslint.findConfigFile(), join(cwd, 'eslint.config.mcts'));
                         await assert.rejects(() => eslint.lintParallel(['foo.js']));
                     },
@@ -6678,8 +6637,7 @@ describe
                             },
                         );
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         await assert.rejects(() => eslint.lintParallel(['foo.js']));
                     },
                 );
@@ -6700,7 +6658,7 @@ describe
                             },
                         );
 
-                        assert.strictEqual
+                        assert.equal
                         (await eslint.findConfigFile(), join(cwd, '../../eslint.config.js'));
                         await assert.doesNotReject(() => eslint.lintParallel(['foo.js']));
                     },
@@ -6723,13 +6681,12 @@ describe
                         );
                         const results = await eslint.lintParallel(['foo*.js']);
 
-                        assert.strictEqual
-                        (await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        assert.strictEqual(results.length, 1);
-                        assert.strictEqual(results[0].filePath, join(cwd, 'foo.js'));
-                        assert.strictEqual(results[0].messages.length, 1);
-                        assert.strictEqual(results[0].messages[0].severity, 2);
-                        assert.strictEqual(results[0].messages[0].ruleId, 'no-undef');
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].filePath, join(cwd, 'foo.js'));
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
             },
@@ -6859,7 +6816,7 @@ describe
                 const inputPath = getFixturePath('fix-types/fix-only-semi.js');
                 const results = await eslint.lintParallel([inputPath]);
 
-                assert.strictEqual(results[0].output, void 0);
+                assert.equal(results[0].output, undefined);
             },
         );
 
@@ -6868,21 +6825,33 @@ describe
             'should not fix non-style rules when fixTypes has only \'layout\'',
             async () =>
             {
-                eslint =
-                await ESLint.fromCLIOptions
+                let results;
+                let expectedOutput;
+                await Promise.all
                 (
-                    {
-                        cwd:        join(fixtureDir, '..'),
-                        fix:        true,
-                        fixType:    ['layout'],
-                    },
+                    [
+                        (async () => {
+                            eslint =
+                            await ESLint.fromCLIOptions
+                            (
+                                {
+                                    cwd:        join(fixtureDir, '..'),
+                                    fix:        true,
+                                    fixType:    ['layout'],
+                                },
+                            );
+                            const inputPath = getFixturePath('fix-types/fix-only-semi.js');
+                            results = await eslint.lintParallel([inputPath]);
+                        })(),
+                        (async () => {
+                            const outputPath =
+                            getFixturePath('fix-types/fix-only-semi.expected.js');
+                            expectedOutput = await readFile(outputPath, 'utf8');
+                        })(),
+                    ],
                 );
-                const inputPath = getFixturePath('fix-types/fix-only-semi.js');
-                const outputPath = getFixturePath('fix-types/fix-only-semi.expected.js');
-                const results = await eslint.lintParallel([inputPath]);
-                const expectedOutput = await readFile(outputPath, 'utf8');
 
-                assert.strictEqual(results[0].output, expectedOutput);
+                assert.equal(results[0].output, expectedOutput);
             },
         );
 
@@ -6891,22 +6860,34 @@ describe
             'should not fix style or problem rules when fixTypes has only \'suggestion\'',
             async () =>
             {
-                eslint =
-                await ESLint.fromCLIOptions
+                let results;
+                let expectedOutput;
+                await Promise.all
                 (
-                    {
-                        cwd:        join(fixtureDir, '..'),
-                        fix:        true,
-                        fixType:    ['suggestion'],
-                    },
+                    [
+                        (async () => {
+                            eslint =
+                            await ESLint.fromCLIOptions
+                            (
+                                {
+                                    cwd:        join(fixtureDir, '..'),
+                                    fix:        true,
+                                    fixType:    ['suggestion'],
+                                },
+                            );
+                            const inputPath =
+                            getFixturePath('fix-types/fix-only-prefer-arrow-callback.js');
+                            results = await eslint.lintParallel([inputPath]);
+                        })(),
+                        (async () => {
+                            const outputPath =
+                            getFixturePath('fix-types/fix-only-prefer-arrow-callback.expected.js');
+                            expectedOutput = await readFile(outputPath, 'utf8');
+                        })(),
+                    ],
                 );
-                const inputPath = getFixturePath('fix-types/fix-only-prefer-arrow-callback.js');
-                const outputPath =
-                getFixturePath('fix-types/fix-only-prefer-arrow-callback.expected.js');
-                const results = await eslint.lintParallel([inputPath]);
-                const expectedOutput = await readFile(outputPath, 'utf8');
 
-                assert.strictEqual(results[0].output, expectedOutput);
+                assert.equal(results[0].output, expectedOutput);
             },
         );
 
@@ -6916,23 +6897,35 @@ describe
             '\'layout\'',
             async () =>
             {
-                eslint =
-                await ESLint.fromCLIOptions
+                let results;
+                let expectedOutput;
+                await Promise.all
                 (
-                    {
-                        cwd:        join(fixtureDir, '..'),
-                        fix:        true,
-                        fixType:    ['suggestion', 'layout'],
-                    },
+                    [
+                        (async () => {
+                            eslint =
+                            await ESLint.fromCLIOptions
+                            (
+                                {
+                                    cwd:        join(fixtureDir, '..'),
+                                    fix:        true,
+                                    fixType:    ['suggestion', 'layout'],
+                                },
+                            );
+                            const inputPath =
+                            getFixturePath('fix-types/fix-both-semi-and-prefer-arrow-callback.js');
+                            results = await eslint.lintParallel([inputPath]);
+                        })(),
+                        (async () => {
+                            const outputPath =
+                            getFixturePath
+                            ('fix-types/fix-both-semi-and-prefer-arrow-callback.expected.js');
+                            expectedOutput = await readFile(outputPath, 'utf8');
+                        })(),
+                    ],
                 );
-                const inputPath =
-                getFixturePath('fix-types/fix-both-semi-and-prefer-arrow-callback.js');
-                const outputPath =
-                getFixturePath('fix-types/fix-both-semi-and-prefer-arrow-callback.expected.js');
-                const results = await eslint.lintParallel([inputPath]);
-                const expectedOutput = await readFile(outputPath, 'utf8');
 
-                assert.strictEqual(results[0].output, expectedOutput);
+                assert.equal(results[0].output, expectedOutput);
             },
         );
     },
@@ -6963,13 +6956,13 @@ describe
                 );
                 const results = await engine.lintParallel(['file-to-fix.js']);
 
-                assert.strictEqual(results[0].stats.fixPasses, 0);
-                assert.strictEqual(results[0].stats.times.passes.length, 1);
+                assert.equal(results[0].stats.fixPasses, 0);
+                assert.equal(results[0].stats.times.passes.length, 1);
                 assert(Number.isFinite(results[0].stats.times.passes[0].parse.total));
                 assert
                 (Number.isFinite(results[0].stats.times.passes[0].rules['no-regex-spaces'].total));
                 assert(Number.isFinite(results[0].stats.times.passes[0].rules['wrap-regex'].total));
-                assert.strictEqual(results[0].stats.times.passes[0].fix.total, 0);
+                assert.equal(results[0].stats.times.passes[0].fix.total, 0);
                 assert(Number.isFinite(results[0].stats.times.passes[0].total));
             },
         );
@@ -6991,8 +6984,8 @@ describe
                 );
                 const results = await engine.lintParallel(['file-to-fix.js']);
 
-                assert.strictEqual(results[0].stats.fixPasses, 2);
-                assert.strictEqual(results[0].stats.times.passes.length, 3);
+                assert.equal(results[0].stats.fixPasses, 2);
+                assert.equal(results[0].stats.times.passes.length, 3);
                 assert(Number.isFinite(results[0].stats.times.passes[0].parse.total));
                 assert(Number.isFinite(results[0].stats.times.passes[1].parse.total));
                 assert(Number.isFinite(results[0].stats.times.passes[2].parse.total));
@@ -7007,7 +7000,7 @@ describe
                 assert(Number.isFinite(results[0].stats.times.passes[2].rules['wrap-regex'].total));
                 assert(Number.isFinite(results[0].stats.times.passes[0].fix.total));
                 assert(Number.isFinite(results[0].stats.times.passes[1].fix.total));
-                assert.strictEqual(results[0].stats.times.passes[2].fix.total, 0);
+                assert.equal(results[0].stats.times.passes[2].fix.total, 0);
                 assert(Number.isFinite(results[0].stats.times.passes[0].total));
                 assert(Number.isFinite(results[0].stats.times.passes[1].total));
                 assert(Number.isFinite(results[0].stats.times.passes[2].total));
@@ -7051,7 +7044,7 @@ describe
                 const results = await eslint.lintParallel([inputPath]);
                 const expectedOutput = await readFile(outputPath, 'utf8');
 
-                assert.strictEqual(results[0].output, expectedOutput);
+                assert.equal(results[0].output, expectedOutput);
             },
         );
     },

@@ -25,10 +25,10 @@
     "test": "mocha test/*.js"
   },
   "dependencies": {
-    "eslint": "9.9.0"
+    "eslint": "9.9.1"
   },
   "devDependencies": {
-    "@origin-1/eslint-config": "^1.6.0",
+    "@origin-1/eslint-config": "^1.6.1",
     "acorn": "^8.12.1",
     "c8js": "^0.8.0",
     "esprima": "^4.0.1",
