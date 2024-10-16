@@ -11,11 +11,10 @@ from 'node:path';
 import { setImmediate }                     from 'node:timers/promises';
 import { fileURLToPath }                    from 'node:url';
 import { setEnvironmentData }               from 'node:worker_threads';
+import createImportAs                       from '../lib/create-import-as.js';
 import eslintDirURL                         from '../lib/default-eslint-dir-url.js';
 import patchESLint                          from '../lib/patch-eslint.js';
 import { createCustomTeardown, unIndent }   from './_utils/index.js';
-import fCache                               from 'file-entry-cache';
-import murmur                               from 'imurmurhash';
 import sinon                                from 'sinon';
 
 async function getESLint()
@@ -27,7 +26,8 @@ async function getESLint()
 
 const ESLint = await getESLint();
 
-const fixtureDir = join(await realpath(tmpdir()), 'eslint/fixtures');
+const tmpDir = await realpath(tmpdir());
+const fixtureDir = join(tmpDir, 'eslint/fixtures');
 const originalDir = process.cwd();
 
 async function directoryExists(filename)
@@ -79,16 +79,6 @@ function getFixturePath(...args)
     return filepath;
 }
 
-/**
- * hash the given string
- * @param {string} str the string to hash
- * @returns {string} the hash
- */
-function hash(str)
-{
-    return murmur(str).result().toString(36);
-}
-
 // copy into clean area so as not to get "infected" by this project's .eslintrc files
 async function setUpFixtures()
 {
@@ -99,8 +89,7 @@ async function setUpFixtures()
      * Mocha uses `this` to set timeouts on an individual hook level.
      */
     this.timeout(60 * 1000);
-    await mkdir(fixtureDir, { recursive: true });
-    await cp('./test/fixtures/.', fixtureDir, { recursive: true });
+    await cp('test/fixtures', fixtureDir, { recursive: true });
 }
 
 async function tearDownFixtures()
@@ -122,16 +111,31 @@ async function tryStat(filename)
     }
 }
 
-describe
+function useFixtures()
+{
+    before(setUpFixtures);
+
+    after(tearDownFixtures);
+}
+
+(
+    (title, fn) =>
+    {
+        describe(title, () => fn([]));
+        describe
+        (
+            `${title} with flag unstable_config_lookup_from_file`,
+            () => fn(['unstable_config_lookup_from_file']),
+        );
+    }
+)
 (
     'lintParallel()',
-    () =>
+    flag =>
     {
         let eslint;
 
-        before(setUpFixtures);
-
-        after(tearDownFixtures);
+        useFixtures();
 
         it
         (
@@ -144,6 +148,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    originalDir,
                         ignore: false,
                         parser: fileURLToPath(parserURL),
@@ -167,6 +172,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    originalDir,
                         config: 'test/fixtures/simple-valid-project/eslint.config.js',
                     },
@@ -190,6 +196,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    originalDir,
                         config: 'test/fixtures/simple-valid-project/eslint.config.js',
                     },
@@ -220,6 +227,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         parserOptions:  { ecmaVersion: 2022 },
                         parser:         'espree',
                     },
@@ -242,6 +250,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         parser: 'esprima',
                         ignore: false,
                     },
@@ -254,51 +263,130 @@ describe
             },
         );
 
-        it
+        describe
         (
-            'should throw if eslint.config.js file is not present',
-            async () =>
+            'Missing Configuration File',
+            () =>
             {
-                const cwd = getFixturePath('..');
-                eslint =
-                await ESLint.fromCLIOptions
+                const workDir = join(tmpDir, 'eslint/no-config');
+
+                // copy into clean area so as not to get "infected" by other config files
+                before
                 (
+                    async () =>
                     {
-                        cwd,
-                        configLookup: true,
+                        await cp
+                        (
+                            'test/fixtures/no-config-file',
+                            join(workDir, 'no-config-file'),
+                            { recursive: true },
+                        );
                     },
                 );
-                await assert.rejects
-                (() => eslint.lintParallel('fixtures/undef*.js'), /Could not find config file/u);
-            },
-        );
 
-        it
-        (
-            'should not throw if eslint.config.js file is not present and overrideConfigFile is ' +
-            '`true`',
-            async () =>
-            {
-                eslint = await ESLint.fromCLIOptions({ cwd: getFixturePath('..') });
-                await eslint.lintParallel('fixtures/undef*.js');
-            },
-        );
+                after
+                (async () => { await rm(workDir, { force: true, recursive: true }); });
 
-        it
-        (
-            'should not throw if eslint.config.js file is not present and overrideConfigFile is ' +
-            'path to a config file',
-            async () =>
-            {
-                eslint =
-                await ESLint.fromCLIOptions
+                it
                 (
+                    'should throw if eslint.config.js file is not present',
+                    async () =>
                     {
-                        cwd:    getFixturePath('..'),
-                        config: 'fixtures/configurations/quotes-error.js',
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd:            workDir,
+                                configLookup:   true,
+                            },
+                        );
+                        await assert.rejects
+                        (eslint.lintParallel('no-config-file/*.js'), /Could not find config file/u);
                     },
                 );
-                await eslint.lintParallel('fixtures/undef*.js');
+
+                it
+                (
+                    'should throw if eslint.config.js file is not present even if overrideConfig ' +
+                    'was passed',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd:            workDir,
+                                rule:           { 'no-unused-vars': 2 },
+                                configLookup:   true,
+                            },
+                        );
+                        await assert.rejects
+                        (eslint.lintParallel('no-config-file/*.js'), /Could not find config file/u);
+                    },
+                );
+
+                it
+                (
+                    'should throw if eslint.config.js file is not present even if overrideConfig ' +
+                    'was passed and a file path is given',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd:            workDir,
+                                rule:           { 'no-unused-vars': 2 },
+                                configLookup:   true,
+                            },
+                        );
+                        await assert.rejects
+                        (
+                            eslint.lintParallel('no-config-file/foo.js'),
+                            /Could not find config file/u,
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should not throw if eslint.config.js file is not present and ' +
+                    'overrideConfigFile is `true`',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd: workDir,
+                            },
+                        );
+                        await eslint.lintParallel('no-config-file/*.js');
+                    },
+                );
+
+                it
+                (
+                    'should not throw if eslint.config.js file is not present and ' +
+                    'overrideConfigFile is path to a config file',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd:    workDir,
+                                config: join(fixtureDir, 'configurations/quotes-error.js'),
+                            },
+                        );
+                        await eslint.lintParallel('no-config-file/*.js');
+                    },
+                );
             },
         );
 
@@ -311,11 +399,12 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    getFixturePath(),
                         config: 'does-not-exist.js',
                     },
                 );
-                await assert.rejects(() => eslint.lintParallel('undef*.js'), { code: 'ENOENT' });
+                await assert.rejects(eslint.lintParallel('undef*.js'), { code: 'ENOENT' });
             },
         );
 
@@ -326,10 +415,15 @@ describe
             {
                 eslint =
                 await ESLint.fromCLIOptions
-                ({ overrideConfig: { languageOptions: { parser: 'test11' } } });
+                (
+                    {
+                        flag,
+                        overrideConfig: { languageOptions: { parser: 'test11' } },
+                    },
+                );
                 await assert.rejects
                 (
-                    async () => await eslint.lintParallel(['lib/eslint-p.js']),
+                    eslint.lintParallel(['lib/eslint-p.js']),
                     /Expected object with parse\(\) or parseForESLint\(\) method/u,
                 );
             },
@@ -347,7 +441,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath();
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const results =
                         await eslint.lintParallel
                         (['files/foo.js', 'files/../files/foo.js', 'files/foo.js']);
@@ -366,7 +467,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath();
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const results = await eslint.lintParallel(['files/foo.js', 'files/foo*']);
 
                         assert.equal(results.length, 1);
@@ -383,7 +491,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath();
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const results = await eslint.lintParallel(['files/f*.js', 'files/foo*']);
 
                         assert.equal(results.length, 1);
@@ -415,10 +530,10 @@ describe
                             `should throw an error when passed ${name}`,
                             async () =>
                             {
-                                eslint = await ESLint.fromCLIOptions();
+                                eslint = await ESLint.fromCLIOptions({ flag });
                                 await assert.rejects
                                 (
-                                    async () => await eslint.lintParallel(value),
+                                    eslint.lintParallel(value),
                                     {
                                         message:
                                         '\'patterns\' must be a non-empty string or an array of ' +
@@ -453,6 +568,7 @@ describe
                                 await ESLint.fromCLIOptions
                                 (
                                     {
+                                        flag,
                                         ignore:         false,
                                         cwd:            getFixturePath('files'),
                                         overrideConfig: { files: ['**/*.js'] },
@@ -476,9 +592,11 @@ describe
                             'passOnNoPatterns: true',
                             async () =>
                             {
-                                eslint = await ESLint.fromCLIOptions
+                                eslint =
+                                await ESLint.fromCLIOptions
                                 (
                                     {
+                                        flag,
                                         ignore:             false,
                                         cwd:                getFixturePath('files'),
                                         overrideConfig:     { files: ['**/*.js'] },
@@ -505,6 +623,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:            join(fixtureDir, '..'),
                         config:         getFixturePath('eslint.config.js'),
                         overrideConfig: { files: ['**/*.js2'] },
@@ -527,6 +646,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore:         false,
                         cwd:            getFixturePath('..'),
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
@@ -554,6 +674,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd,
                         overrideConfig: { files: ['*'] },
                     },
@@ -580,6 +701,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore:         false,
                         cwd,
                         configLookup:   true,
@@ -606,6 +728,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore: false,
                         cwd,
                     },
@@ -630,6 +753,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore: false,
                         cwd,
                     },
@@ -654,6 +778,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd,
                         configLookup: true,
                     },
@@ -678,6 +803,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd,
                         configLookup: true,
                     },
@@ -708,6 +834,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 configLookup: true,
                             },
@@ -737,6 +864,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 configLookup: true,
                             },
@@ -762,7 +890,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath('dot-files');
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const results = await eslint.lintParallel(['.a.js']);
 
                         assert.equal(results.length, 1);
@@ -791,14 +926,14 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 ignore: false,
                                 cwd,
                             },
                         );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['subdir1', 'doesnotexist/*.js']); },
+                            eslint.lintParallel(['subdir1', 'doesnotexist/*.js']),
                             /No files matching 'doesnotexist\/\*\.js' were found/u,
                         );
                     },
@@ -815,14 +950,14 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 ignorePattern: ['subdir2'],
                             },
                         );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']); },
+                            eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']),
                             /All files matched by 'subdir2\/\*\.js' are ignored/u,
                         );
                     },
@@ -839,14 +974,14 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 ignorePattern: ['subdir2/*.js'],
                             },
                         );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']); },
+                            eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']),
                             /All files matched by 'subdir2\/\*\.js' are ignored/u,
                         );
                     },
@@ -862,35 +997,29 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 ignorePattern: ['subdir1/*.js', 'subdir2/*.js'],
                             },
                         );
                         await assert.rejects
                         (
-                            async () =>
-                            {
-                                await eslint.lintParallel
-                                (['doesnotexist1/*.js', 'doesnotexist2/*.js']);
-                            },
+                            eslint.lintParallel(['doesnotexist1/*.js', 'doesnotexist2/*.js']),
                             /No files matching 'doesnotexist1\/\*\.js' were found/u,
                         );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['doesnotexist1/*.js', 'subdir1/*.js']); },
+                            eslint.lintParallel(['doesnotexist1/*.js', 'subdir1/*.js']),
                             /No files matching 'doesnotexist1\/\*\.js' were found/u,
                         );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['subdir1/*.js', 'doesnotexist1/*.js']); },
+                            eslint.lintParallel(['subdir1/*.js', 'doesnotexist1/*.js']),
                             /All files matched by 'subdir1\/\*\.js' are ignored/u,
                         );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']); },
+                            eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']),
                             /All files matched by 'subdir1\/\*\.js' are ignored/u,
                         );
                     },
@@ -907,6 +1036,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 errorOnUnmatchedPattern:    false,
                                 ignorePattern:              ['subdir2/*.js'],
@@ -929,6 +1059,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 errorOnUnmatchedPattern: false,
                             },
@@ -958,6 +1089,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 ignore:         false,
                                 cwd,
                                 configLookup:   true,
@@ -981,6 +1113,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 ignore: false,
                                 overrideConfig:
                                 {
@@ -1021,6 +1154,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 ignore: false,
                                 overrideConfig:
                                 {
@@ -1055,6 +1189,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore:         false,
                         cwd:            join(fixtureDir, '..'),
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
@@ -1082,6 +1217,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore:         false,
                         cwd:            getFixturePath('..'),
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
@@ -1112,6 +1248,7 @@ describe
                     await ESLint.fromCLIOptions
                     (
                         {
+                            flag,
                             ignore:         false,
                             cwd:            getFixturePath('..'),
                             overrideConfig: { files: ['**/*.js', '**/*.js2'] },
@@ -1140,6 +1277,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore:         false,
                         cwd:            getFixturePath('..'),
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
@@ -1148,7 +1286,7 @@ describe
                 );
                 await assert.rejects
                 (
-                    async () => { await eslint.lintParallel(['fixtures/files/*']); },
+                    eslint.lintParallel(['fixtures/files/*']),
                     /No files matching 'fixtures\/files\/\*' were found \(glob was disabled\)\./u,
                 );
             },
@@ -1166,7 +1304,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath('cli-engine');
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const results = await eslint.lintParallel(['node_modules/foo.js']);
                         const expectedMsg =
                         'File ignored by default because it is located under the node_modules ' +
@@ -1192,7 +1337,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath('cli-engine');
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const results =
                         await eslint.lintParallel
                         (['nested_node_modules/subdir/node_modules/text.js']);
@@ -1223,6 +1375,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 ignorePattern: ['*.js'],
                             },
@@ -1256,6 +1409,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 warnIgnored: false,
                             },
@@ -1276,6 +1430,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 rule: { quotes: [2, 'single'] },
                             },
@@ -1296,10 +1451,17 @@ describe
                     'should ignore node_modules files when using ignore file',
                     async () =>
                     {
-                        eslint = await ESLint.fromCLIOptions({ cwd: getFixturePath('cli-engine') });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd: getFixturePath('cli-engine'),
+                            },
+                        );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['node_modules']); },
+                            eslint.lintParallel(['node_modules']),
                             /All files matched by 'node_modules' are ignored\./u,
                         );
                     },
@@ -1316,13 +1478,14 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 ignore: false,
                             },
                         );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['node_modules']); },
+                            eslint.lintParallel(['node_modules']),
                             /All files matched by 'node_modules' are ignored\./u,
                         );
                     },
@@ -1335,11 +1498,15 @@ describe
                     {
                         eslint =
                         await ESLint.fromCLIOptions
-                        ({ config: getFixturePath('eslint.config-with-ignores.js') });
+                        (
+                            {
+                                flag,
+                                config: getFixturePath('eslint.config-with-ignores.js'),
+                            },
+                        );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['test/fixtures/cli-engine/']); },
+                            eslint.lintParallel(['test/fixtures/cli-engine/']),
                             /All files matched by 'test\/fixtures\/cli-engine\/' are ignored\./u,
                         );
                     },
@@ -1353,15 +1520,16 @@ describe
                     {
                         eslint =
                         await ESLint.fromCLIOptions
-                        ({ config: getFixturePath('eslint.config-with-ignores.js') });
+                        (
+                            {
+                                flag,
+                                config: getFixturePath('eslint.config-with-ignores.js'),
+                            },
+                        );
                         const expectedRegExp =
                         /All files matched by '\.\/test\/fixtures\/cli-engine\/' are ignored\./u;
                         await assert.rejects
-                        (
-                            async () =>
-                            { await eslint.lintParallel(['./test/fixtures/cli-engine/']); },
-                            expectedRegExp,
-                        );
+                        (eslint.lintParallel(['./test/fixtures/cli-engine/']), expectedRegExp);
                     },
                 );
 
@@ -1375,6 +1543,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 rule:   { quotes: [2, 'double'] },
                                 cwd:    getFixturePath('cli-engine', 'nested_node_modules'),
                             },
@@ -1401,6 +1570,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 config:
                                 getFixturePath('cli-engine/eslint.config-with-ignores2.js'),
                                 rule: { quotes: [2, 'double'] },
@@ -1409,11 +1579,7 @@ describe
                         const expectedRegExp =
                         /All files matched by '\.\/test\/fixtures\/cli-engine\/' are ignored\./u;
                         await assert.rejects
-                        (
-                            async () =>
-                            { await eslint.lintParallel(['./test/fixtures/cli-engine/']); },
-                            expectedRegExp,
-                        );
+                        (eslint.lintParallel(['./test/fixtures/cli-engine/']), expectedRegExp);
                     },
                 );
 
@@ -1424,11 +1590,15 @@ describe
                     {
                         eslint =
                         await ESLint.fromCLIOptions
-                        ({ ignorePattern: ['test/fixtures/single-quoted.js'] });
+                        (
+                            {
+                                flag,
+                                ignorePattern: ['test/fixtures/single-quoted.js'],
+                            },
+                        );
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['test/fixtures/*-quoted.js']); },
+                            eslint.lintParallel(['test/fixtures/*-quoted.js']),
                             /All files matched by 'test\/fixtures\/\*-quoted\.js' are ignored\./u,
                         );
                     },
@@ -1439,7 +1609,14 @@ describe
                     'should not throw an error when ignorePatterns is an empty array',
                     async () =>
                     {
-                        eslint = await ESLint.fromCLIOptions({ ignorePattern: [] });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                ignorePattern: [],
+                            },
+                        );
                         await assert.doesNotReject
                         (async () => { await eslint.lintParallel(['*.js']); });
                     },
@@ -1454,6 +1631,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 config: 'eslint.config-with-ignores.js',
                                 cwd:    getFixturePath(),
                             },
@@ -1486,7 +1664,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath();
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const filePath = getFixturePath('files', 'foo.js2');
                         const results = await eslint.lintParallel([filePath]);
 
@@ -1514,7 +1699,14 @@ describe
                     async () =>
                     {
                         const cwd = getFixturePath('files');
-                        eslint = await ESLint.fromCLIOptions({ cwd });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                            },
+                        );
                         const filePath = getFixturePath('passing.js');
                         const results = await eslint.lintParallel([filePath]);
 
@@ -1545,6 +1737,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 config:         'eslint.config-with-ignores.js',
                                 cwd:            getFixturePath(),
                                 warnIgnored:    false,
@@ -1567,6 +1760,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 config: 'eslint.config-with-ignores.js',
                                 cwd:    getFixturePath(),
                             },
@@ -1603,6 +1797,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:    getFixturePath(),
                                 ignore: false,
                                 config: getFixturePath('eslint.config-with-ignores.js'),
@@ -1632,6 +1827,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            getFixturePath('ignores-relative/subdir'),
                                 configLookup:   true,
                             },
@@ -1654,18 +1850,19 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            getFixturePath('ignores-directory'),
                                 configLookup:   true,
                             },
                         );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['subdir/**']); },
+                            eslint.lintParallel(['subdir/**']),
                             /All files matched by 'subdir\/\*\*' are ignored\./u,
                         );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['subdir/subsubdir/**']); },
+                            eslint.lintParallel(['subdir/subsubdir/**']),
                             /All files matched by 'subdir\/subsubdir\/\*\*' are ignored\./u,
                         );
                         const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
@@ -1694,13 +1891,14 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            getFixturePath('ignores-subdirectory'),
                                 configLookup:   true,
                             },
                         );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['subdir/**/*.js']); },
+                            eslint.lintParallel(['subdir/**/*.js']),
                             /All files matched by 'subdir\/\*\*\/\*\.js' are ignored\./u,
                         );
                         const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
@@ -1721,13 +1919,14 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            getFixturePath('ignores-subdirectory/subdir'),
                                 configLookup:   true,
                             },
                         );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['subsubdir/**/*.js']); },
+                            eslint.lintParallel(['subsubdir/**/*.js']),
                             /All files matched by 'subsubdir\/\*\*\/\*\.js' are ignored\./u,
                         );
                     },
@@ -1743,6 +1942,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            getFixturePath('ignores-self'),
                                 configLookup:   true,
                             },
@@ -1767,6 +1967,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: getFixturePath('ignores-relative'),
                                 ignorePattern:
                                 [
@@ -1795,6 +1996,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: getFixturePath('ignores-directory'),
                                 ignorePattern:
                                 [
@@ -1827,6 +2029,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: getFixturePath('ignores-directory-deep'),
                                 ignorePattern:
                                 [
@@ -1869,6 +2072,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            getFixturePath('ignores-directory-deep'),
                                 ignorePattern:  ['tests/format/*/'],
                             },
@@ -1903,6 +2107,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: getFixturePath('ignores-directory-deep'),
                                 ignorePattern:
                                 [
@@ -1933,6 +2138,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: getFixturePath('ignores-directory-deep'),
                                 ignorePattern:
                                 [
@@ -1944,10 +2150,7 @@ describe
                             },
                         );
                         await assert.rejects
-                        (
-                            async () => { await eslint.lintParallel(['.']); },
-                            /All files matched by '.' are ignored/u,
-                        );
+                        (eslint.lintParallel(['.']), /All files matched by '.' are ignored/u);
                     },
                 );
 
@@ -1961,6 +2164,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: getFixturePath('ignores-directory-deep'),
                                 ignorePattern:
                                 [
@@ -1976,10 +2180,7 @@ describe
                             },
                         );
                         await assert.rejects
-                        (
-                            async () => { await eslint.lintParallel(['.']); },
-                            /All files matched by '.' are ignored/u,
-                        );
+                        (eslint.lintParallel(['.']), /All files matched by '.' are ignored/u);
                     },
                 );
 
@@ -1993,6 +2194,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            getFixturePath(),
                                 // ignore file named `{a,b}.js`, not files named `a.js` or `b.js`
                                 ignorePattern:  ['curly-files/\\{a,b}.js'],
@@ -2027,6 +2229,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:                        getFixturePath('ignores-relative'),
                                 ignorePattern:              ['/'],
                                 plugin:                     ['no-program'],
@@ -2062,6 +2265,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:                        getFixturePath('ignores-relative'),
                                 ignorePattern:              ['**', '!a.js'],
                                 plugin:                     ['no-program'],
@@ -2092,6 +2296,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         overrideConfig: { files: ['**/*.js', '**/*.js2'] },
                         ignore:         false,
                         cwd:            join(fixtureDir, '..'),
@@ -2119,6 +2324,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    getFixturePath(),
                         rule:   { quotes: ['error', 'double'] },
                         ignore: false,
@@ -2148,6 +2354,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd: join(fixtureDir, '..'),
                         rule:
                         {
@@ -2214,6 +2421,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    join(fixtureDir, '..'),
                         config: getFixturePath('configurations', 'env-browser.js'),
                     },
@@ -2235,6 +2443,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    join(fixtureDir, '..'),
                         global: ['window'],
                         rule:
@@ -2262,6 +2471,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    join(fixtureDir, '..'),
                         config: getFixturePath('configurations', 'env-node.js'),
                     },
@@ -2283,6 +2493,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    join(fixtureDir, '..'),
                         config: getFixturePath('eslint.config.js'),
                         ignore: false,
@@ -2318,6 +2529,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         ignore: false,
                         cwd:    getFixturePath(),
                         config: getFixturePath('eslint.config.js'),
@@ -2340,6 +2552,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:    getFixturePath(),
                         ignore: false,
                     },
@@ -2369,6 +2582,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: originalDir,
                                 rule:
                                 {
@@ -2399,6 +2613,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: originalDir,
                                 rule:
                                 {
@@ -2422,6 +2637,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: originalDir,
                                 config:
                                 'test/fixtures/cli-engine/deprecated-rule-config/eslint.config.js',
@@ -2454,6 +2670,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: join(fixtureDir, '..'),
                                 fix: true,
                             },
@@ -2477,6 +2694,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: join(fixtureDir, '..'),
                                 fix: true,
                             },
@@ -2512,6 +2730,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd: join(fixtureDir, '..'),
                                 fix: true,
                                 rule:
@@ -2677,6 +2896,7 @@ describe
                     {
                         const baseOptions =
                         {
+                            flag,
                             cwd: join(fixtureDir, '..'),
                             rule:
                             {
@@ -2717,6 +2937,7 @@ describe
                         await eslintWithPlugins
                         (
                             {
+                                flag,
                                 cwd:    join(fixtureDir, '..'),
                                 config: getFixturePath('configurations', 'plugins-with-prefix.js'),
                             },
@@ -2742,6 +2963,7 @@ describe
                         await eslintWithPlugins
                         (
                             {
+                                flag,
                                 cwd:    join(fixtureDir, '..'),
                                 rule:   { 'example/example-rule': 1 },
                             },
@@ -2767,6 +2989,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:                        join(fixtureDir, '..'),
                                 rule:                       { 'test/example-rule': 1 },
                                 plugin:                     ['test'],
@@ -2788,1227 +3011,6 @@ describe
 
         describe
         (
-            'cache',
-            () =>
-            {
-                /**
-                 * helper method to delete a file without caring about exceptions
-                 * @param {string} filePath The file path
-                 * @returns {void}
-                 */
-                async function doDelete(filePath)
-                {
-                    try
-                    {
-                        await unlink(filePath);
-                    }
-                    catch
-                    {
-                        /*
-                         * we don't care if the file didn't exist, since our
-                         * intention was to remove the file
-                         */
-                    }
-                }
-
-                let cacheFilePath;
-
-                beforeEach
-                (() => { cacheFilePath = null; });
-
-                afterEach
-                (
-                    async () =>
-                    {
-                        sinon.restore();
-                        if (cacheFilePath)
-                            await doDelete(cacheFilePath);
-                    },
-                );
-
-                describe
-                (
-                    'when cacheLocation is a directory or looks like a directory',
-                    () =>
-                    {
-                        const cwd = getFixturePath();
-
-                        /**
-                         * helper method to delete the directory used in testing
-                         * @returns {void}
-                         */
-                        async function deleteCacheDir()
-                        {
-                            try
-                            {
-                                await rm
-                                (join(cwd, 'tmp/.cacheFileDir/'), { recursive: true, force: true });
-                            }
-                            catch
-                            {
-                                /*
-                                 * we don't care if the file didn't exist, since our
-                                 * intention was to remove the file
-                                 */
-                            }
-                        }
-
-                        beforeEach(deleteCacheDir);
-
-                        afterEach(deleteCacheDir);
-
-                        it
-                        (
-                            'should create the directory and the cache file inside it when ' +
-                            'cacheLocation ends with a slash',
-                            async () =>
-                            {
-                                assert
-                                (
-                                    !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
-                                    'the cache directory already exists and wasn\'t successfully ' +
-                                    'deleted',
-                                );
-
-                                eslint =
-                                await ESLint.fromCLIOptions
-                                (
-                                    {
-                                        cwd,
-                                        // specifying cache true the cache will be created
-                                        cache:          true,
-                                        cacheLocation:  './tmp/.cacheFileDir/',
-                                        rule:
-                                        {
-                                            'no-console':       0,
-                                            'no-unused-vars':   2,
-                                        },
-                                        ignore:         false,
-                                    },
-                                );
-                                const file = getFixturePath('cache/src', 'test-file.js');
-                                await eslint.lintParallel([file]);
-
-                                assert
-                                (
-                                    await fileExists
-                                    (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
-                                    'the cache for eslint should have been created',
-                                );
-                            },
-                        );
-
-                        it
-                        (
-                            'should create the cache file inside existing cacheLocation ' +
-                            'directory when cacheLocation ends with a slash',
-                            async () =>
-                            {
-                                assert
-                                (
-                                    !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
-                                    'the cache directory already exists and wasn\'t successfully ' +
-                                    'deleted',
-                                );
-
-                                await mkdir(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
-                                eslint =
-                                await ESLint.fromCLIOptions
-                                (
-                                    {
-                                        cwd,
-                                        // specifying cache true the cache will be created
-                                        cache:          true,
-                                        cacheLocation:  './tmp/.cacheFileDir/',
-                                        rule:
-                                        {
-                                            'no-console':       0,
-                                            'no-unused-vars':   2,
-                                        },
-                                        ignore:         false,
-                                    },
-                                );
-                                const file = getFixturePath('cache/src', 'test-file.js');
-                                await eslint.lintParallel([file]);
-
-                                assert
-                                (
-                                    await fileExists
-                                    (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
-                                    'the cache for eslint should have been created',
-                                );
-                            },
-                        );
-
-                        it
-                        (
-                            'should create the cache file inside existing cacheLocation ' +
-                            'directory when cacheLocation doesn\'t end with a path separator',
-                            async () =>
-                            {
-                                assert
-                                (
-                                    !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
-                                    'the cache directory already exists and wasn\'t successfully ' +
-                                    'deleted',
-                                );
-
-                                await mkdir(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
-                                eslint =
-                                await ESLint.fromCLIOptions
-                                (
-                                    {
-                                        cwd,
-                                        // specifying cache true the cache will be created
-                                        cache:          true,
-                                        cacheLocation:  './tmp/.cacheFileDir',
-                                        rule:
-                                        {
-                                            'no-console':       0,
-                                            'no-unused-vars':   2,
-                                        },
-                                        ignore:         false,
-                                    },
-                                );
-                                const file = getFixturePath('cache/src', 'test-file.js');
-                                await eslint.lintParallel([file]);
-
-                                assert
-                                (
-                                    await fileExists
-                                    (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
-                                    'the cache for eslint should have been created',
-                                );
-                            },
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should create the cache file inside cwd when no cacheLocation provided',
-                    async () =>
-                    {
-                        const cwd = getFixturePath('cli-engine');
-                        cacheFilePath = join(cwd, '.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cache:  true,
-                                cwd,
-                                rule:   { 'no-console': 0 },
-                                ignore: false,
-                            },
-                        );
-                        const file = getFixturePath('cli-engine', 'console.js');
-                        await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'the cache for eslint should have been created at provided cwd',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should invalidate the cache if the overrideConfig changed between executions',
-                    async () =>
-                    {
-                        const cwd = getFixturePath('cache/src');
-                        cacheFilePath = join(cwd, '.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd,
-                                // specifying cache true the cache will be created
-                                cache:  true,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                                ignore: false,
-                            },
-                        );
-                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
-                        const file = join(cwd, 'test-file.js');
-                        const results = await eslint.lintParallel([file]);
-
-                        for (const { errorCount, warningCount, readFileCalled } of results)
-                        {
-                            assert.equal
-                            (
-                                errorCount + warningCount,
-                                0,
-                                'the file should have passed linting without errors or warnings',
-                            );
-                            assert
-                            (
-                                readFileCalled,
-                                'ESLint should have read the file because there was no cache file',
-                            );
-                        }
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'the cache for eslint should have been created',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd,
-                                // specifying cache true the cache will be created
-                                cache:  true,
-                                rule:
-                                {
-                                    'no-console':       2,
-                                    'no-unused-vars':   2,
-                                },
-                                ignore: false,
-                            },
-                        );
-                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
-                        const [newResult] = await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            newResult.readFileCalled,
-                            'ESLint should have read the file again because it\'s considered ' +
-                            'changed because the config changed',
-                        );
-                        assert.equal
-                        (
-                            newResult.errorCount,
-                            1,
-                            'since configuration changed the cache should have not been used and ' +
-                            'one error should have been reported',
-                        );
-                        assert.equal(newResult.messages[0].ruleId, 'no-console');
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'The cache for ESLint should still exist',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should remember the files from a previous run and do not operate on them if ' +
-                    'not changed',
-                    async () =>
-                    {
-                        const cwd = getFixturePath('cache/src');
-                        cacheFilePath = join(cwd, '.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd,
-                                // specifying cache true the cache will be created
-                                cache:  true,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                                ignore: false,
-                            },
-                        );
-                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
-                        const file = getFixturePath('cache/src', 'test-file.js');
-                        const results = await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            results[0].readFileCalled,
-                            'ESLint should have read the file because there was no cache file',
-                        );
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'the cache for eslint should have been created',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd,
-                                // specifying cache true the cache will be created
-                                cache:  true,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                                ignore: false,
-                            },
-                        );
-                        eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
-                        const cachedResults = await eslint.lintParallel([file]);
-                        // assert the file was not processed because the cache was used
-                        results[0].readFileCalled = false;
-
-                        assert.deepEqual
-                        (results, cachedResults, 'the result should have been the same');
-                    },
-                );
-
-                it
-                (
-                    'when `cacheLocation` is specified, should create the cache file with ' +
-                    '`cache:true` and then delete it with `cache:false`',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        const cliOptions =
-                        {
-                            // specifying cache true the cache will be created
-                            cache:          true,
-                            cacheLocation:  cacheFilePath,
-                            rule:
-                            {
-                                'no-console':       0,
-                                'no-unused-vars':   2,
-                            },
-                            cwd:            join(fixtureDir, '..'),
-                        };
-                        eslint = await ESLint.fromCLIOptions(cliOptions);
-                        const file = getFixturePath('cache/src', 'test-file.js');
-                        await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'the cache for eslint should have been created',
-                        );
-
-                        cliOptions.cache = false;
-                        eslint = await ESLint.fromCLIOptions(cliOptions);
-                        await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache for eslint should have been deleted since last run did ' +
-                            'not use the cache',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should not throw an error if the cache file to be deleted does not exist on ' +
-                    'a read-only file system',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        // Simulate a read-only file system.
-                        sinon.stub(fsPromises, 'unlink').rejects
-                        (Object.assign(Error('read-only file system'), { code: 'EROFS' }));
-                        const cliOptions =
-                        {
-                            // specifying cache false the cache will be deleted
-                            cache:          false,
-                            cacheLocation:  cacheFilePath,
-                            rule:
-                            {
-                                'no-console':       0,
-                                'no-unused-vars':   2,
-                            },
-                            cwd:            join(fixtureDir, '..'),
-                        };
-                        eslint = await ESLint.fromCLIOptions(cliOptions);
-                        const file = getFixturePath('cache/src', 'test-file.js');
-                        await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            fsPromises.unlink.calledWithExactly(cacheFilePath),
-                            'Expected attempt to delete the cache was not made.',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should store in the cache a file that has lint messages and a file that ' +
-                    'doesn\'t have lint messages',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            join(fixtureDir, '..'),
-                                // specifying cache true the cache will be created
-                                cache:          true,
-                                cacheLocation:  cacheFilePath,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                            },
-                        );
-                        const badFile = getFixturePath('cache/src', 'fail-file.js');
-                        const goodFile = getFixturePath('cache/src', 'test-file.js');
-                        const result = await eslint.lintParallel([badFile, goodFile]);
-                        const [badFileResult, goodFileResult] = result;
-
-                        assert.notEqual
-                        (
-                            badFileResult.errorCount + badFileResult.warningCount,
-                            0,
-                            'the bad file should have some lint errors or warnings',
-                        );
-                        assert.equal
-                        (
-                            goodFileResult.errorCount + badFileResult.warningCount,
-                            0,
-                            'the good file should have passed linting without errors or warnings',
-                        );
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'the cache for eslint should have been created',
-                        );
-
-                        const fileCache = fCache.createFromFile(cacheFilePath);
-                        const { cache } = fileCache;
-
-                        assert.equal
-                        (
-                            typeof cache.getKey(goodFile),
-                            'object',
-                            'the entry for the good file should have been in the cache',
-                        );
-                        assert.equal
-                        (
-                            typeof cache.getKey(badFile),
-                            'object',
-                            'the entry for the bad file should have been in the cache',
-                        );
-
-                        const cachedResult = await eslint.lintParallel([badFile, goodFile]);
-
-                        assert.deepEqual
-                        (result, cachedResult, 'result should be the same with or without cache');
-                    },
-                );
-
-                it
-                (
-                    'should not contain in the cache a file that was deleted',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            join(fixtureDir, '..'),
-                                // specifying cache true the cache will be created
-                                cache:          true,
-                                cacheLocation:  cacheFilePath,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                            },
-                        );
-                        const badFile = getFixturePath('cache/src', 'fail-file.js');
-                        const goodFile = getFixturePath('cache/src', 'test-file.js');
-                        const toBeDeletedFile = getFixturePath('cache/src', 'file-to-delete.js');
-                        await eslint.lintParallel([badFile, goodFile, toBeDeletedFile]);
-                        const fileCache = fCache.createFromFile(cacheFilePath);
-                        let { cache } = fileCache;
-
-                        assert.equal
-                        (
-                            typeof cache.getKey(toBeDeletedFile),
-                            'object',
-                            'the entry for the file to be deleted should have been in the cache',
-                        );
-
-                        // delete the file from the file system
-                        await unlink(toBeDeletedFile);
-
-                        /*
-                         * file-entry-cache@2.0.0 will remove from the cache deleted files
-                         * even when they were not part of the array of files to be analyzed
-                         */
-                        await eslint.lintParallel([badFile, goodFile]);
-                        cache = JSON.parse(await readFile(cacheFilePath));
-
-                        assert.equal
-                        (
-                            typeof cache[0][toBeDeletedFile],
-                            'undefined',
-                            'the entry for the file to be deleted should not have been in the ' +
-                            'cache',
-                        );
-                        // make sure that the previos assertion checks the right place
-                        assert.notEqual
-                        (
-                            typeof cache[0][badFile],
-                            'undefined',
-                            'the entry for the bad file should have been in the cache',
-                        );
-                        assert.notEqual
-                        (
-                            typeof cache[0][goodFile],
-                            'undefined',
-                            'the entry for the good file should have been in the cache',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should contain files that were not visited in the cache provided they still ' +
-                    'exist',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            join(fixtureDir, '..'),
-                                // specifying cache true the cache will be created
-                                cache:          true,
-                                cacheLocation:  cacheFilePath,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                            },
-                        );
-                        const badFile = getFixturePath('cache/src', 'fail-file.js');
-                        const goodFile = getFixturePath('cache/src', 'test-file.js');
-                        const testFile2 = getFixturePath('cache/src', 'test-file2.js');
-                        await eslint.lintParallel([badFile, goodFile, testFile2]);
-                        let fileCache = fCache.createFromFile(cacheFilePath);
-                        let { cache } = fileCache;
-
-                        assert.equal
-                        (
-                            typeof cache.getKey(testFile2),
-                            'object',
-                            'the entry for the test-file2 should have been in the cache',
-                        );
-
-                        /*
-                         * we pass a different set of files (minus test-file2)
-                         * previous version of file-entry-cache would remove the non visited
-                         * entries. 2.0.0 version will keep them unless they don't exist
-                         */
-                        await eslint.lintParallel([badFile, goodFile]);
-                        fileCache = fCache.createFromFile(cacheFilePath);
-                        ({ cache } = fileCache);
-
-                        assert.equal
-                        (
-                            typeof cache.getKey(testFile2),
-                            'object',
-                            'the entry for the test-file2 should have been in the cache',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should not delete cache when executing on files with --cache flag',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        await writeFile(cacheFilePath, '');
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            join(fixtureDir, '..'),
-                                cache:          true,
-                                cacheLocation:  cacheFilePath,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                            },
-                        );
-                        const file = getFixturePath('cli-engine', 'console.js');
-
-                        assert
-                        (await fileExists(cacheFilePath), 'the cache for eslint should exist');
-
-                        await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'the cache for eslint should still exist',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should delete cache when executing on files without --cache flag',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        // intenationally invalid to additionally make sure it isn't used
-                        await writeFile(cacheFilePath, '[]');
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            join(fixtureDir, '..'),
-                                cacheLocation:  cacheFilePath,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                            },
-                        );
-                        const file = getFixturePath('cli-engine', 'console.js');
-
-                        assert
-                        (await fileExists(cacheFilePath), 'the cache for eslint should exist');
-
-                        await eslint.lintParallel([file]);
-
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache for eslint should have been deleted',
-                        );
-                    },
-                );
-
-                it
-                (
-                    'should use the specified cache file',
-                    async () =>
-                    {
-                        cacheFilePath = resolve('.cache/custom-cache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                // specify a custom cache file
-                                cacheLocation:  cacheFilePath,
-                                // specifying cache true the cache will be created
-                                cache:          true,
-                                rule:
-                                {
-                                    'no-console':       0,
-                                    'no-unused-vars':   2,
-                                },
-                                cwd:            join(fixtureDir, '..'),
-                            },
-                        );
-                        const badFile = getFixturePath('cache/src', 'fail-file.js');
-                        const goodFile = getFixturePath('cache/src', 'test-file.js');
-                        const result = await eslint.lintParallel([badFile, goodFile]);
-
-                        assert
-                        (
-                            await fileExists(cacheFilePath),
-                            'the cache for eslint should have been created',
-                        );
-
-                        const fileCache = fCache.createFromFile(cacheFilePath);
-                        const { cache } = fileCache;
-
-                        assert
-                        (
-                            typeof cache.getKey(goodFile) === 'object',
-                            'the entry for the good file should have been in the cache',
-                        );
-                        assert
-                        (
-                            typeof cache.getKey(badFile) === 'object',
-                            'the entry for the bad file should have been in the cache',
-                        );
-
-                        const cachedResult = await eslint.lintParallel([badFile, goodFile]);
-
-                        assert.deepEqual
-                        (result, cachedResult, 'result should be the same with or without cache');
-                    },
-                );
-
-                // https://github.com/eslint/eslint/issues/13507
-                it
-                (
-                    'should not store `usedDeprecatedRules` in the cache file',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        const deprecatedRuleId = 'space-in-parens';
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            join(fixtureDir, '..'),
-                                // specifying cache true the cache will be created
-                                cache:          true,
-                                cacheLocation:  cacheFilePath,
-                                rule:           { [deprecatedRuleId]: 2 },
-                            },
-                        );
-                        const filePath = getFixturePath('cache/src', 'test-file.js');
-
-                        /*
-                         * Run linting on the same file 3 times to cover multiple cases:
-                         *   Run 1: Lint result wasn't already cached.
-                         *   Run 2: Lint result was already cached. The cached lint result is used
-                         *     but the cache is reconciled before the run ends.
-                         *   Run 3: Lint result was already cached. The cached lint result was being
-                         *     used throughout the previous run, so possible mutations in the
-                         *     previous run that occured after the cache was reconciled may have
-                         *     side effects for this run.
-                         */
-                        for (let i = 0; i < 3; i++)
-                        {
-                            const [result] = await eslint.lintParallel([filePath]);
-
-                            assert
-                            (
-                                result.usedDeprecatedRules &&
-                                result.usedDeprecatedRules.some
-                                (rule => rule.ruleId === deprecatedRuleId),
-                                'the deprecated rule should have been in ' +
-                                'result.usedDeprecatedRules',
-                            );
-                            assert
-                            (
-                                await fileExists(cacheFilePath),
-                                'the cache for eslint should have been created',
-                            );
-
-                            const fileCache = fCache.create(cacheFilePath);
-                            const descriptor = fileCache.getFileDescriptor(filePath);
-
-                            assert
-                            (
-                                typeof descriptor === 'object',
-                                'an entry for the file should have been in the cache file',
-                            );
-                            assert
-                            (
-                                typeof descriptor.meta.results === 'object',
-                                'lint result for the file should have been in its cache entry in ' +
-                                'the cache file',
-                            );
-                            assert
-                            (
-                                typeof descriptor.meta.results.usedDeprecatedRules === 'undefined',
-                                'lint result in the cache file contains `usedDeprecatedRules`',
-                            );
-                        }
-                    },
-                );
-
-                // https://github.com/eslint/eslint/issues/13507
-                it
-                (
-                    'should store `source` as `null` in the cache file if the lint result has ' +
-                    '`source` property',
-                    async () =>
-                    {
-                        cacheFilePath = getFixturePath('.eslintcache');
-                        await doDelete(cacheFilePath);
-                        assert
-                        (
-                            !await fileExists(cacheFilePath),
-                            'the cache file already exists and wasn\'t successfully deleted',
-                        );
-
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:            join(fixtureDir, '..'),
-                                // specifying cache true the cache will be created
-                                cache:          true,
-                                cacheLocation:  cacheFilePath,
-                                rule:           { 'no-unused-vars': 2 },
-                            },
-                        );
-                        const filePath = getFixturePath('cache/src', 'fail-file.js');
-
-                        /*
-                         * Run linting on the same file 3 times to cover multiple cases:
-                         *   Run 1: Lint result wasn't already cached.
-                         *   Run 2: Lint result was already cached. The cached lint result is used
-                         *     but the cache is reconciled before the run ends.
-                         *   Run 3: Lint result was already cached. The cached lint result was being
-                         *     used throughout the previous run, so possible mutations in the
-                         *     previous run that occured after the cache was reconciled may have
-                         *     side effects for this run.
-                         */
-                        for (let i = 0; i < 3; i++)
-                        {
-                            const [result] = await eslint.lintParallel([filePath]);
-
-                            assert
-                            (
-                                typeof result.source === 'string',
-                                'the result should have contained the `source` property',
-                            );
-
-                            assert
-                            (
-                                await fileExists(cacheFilePath),
-                                'the cache for eslint should have been created',
-                            );
-
-                            const fileCache = fCache.create(cacheFilePath);
-                            const descriptor = fileCache.getFileDescriptor(filePath);
-
-                            assert
-                            (
-                                typeof descriptor === 'object',
-                                'an entry for the file should have been in the cache file',
-                            );
-                            assert
-                            (
-                                typeof descriptor.meta.results === 'object',
-                                'lint result for the file should have been in its cache entry in ' +
-                                'the cache file',
-                            );
-                            // if the lint result contains `source`, it should be stored as `null`
-                            // in the cache file
-                            assert.equal
-                            (
-                                descriptor.meta.results.source,
-                                null,
-                                'lint result in the cache file contains non-null `source`',
-                            );
-                        }
-                    },
-                );
-
-                describe
-                (
-                    'cacheStrategy',
-                    () =>
-                    {
-                        it
-                        (
-                            'should detect changes using a file\'s modification time when set to ' +
-                            '\'metadata\'',
-                            async () =>
-                            {
-                                cacheFilePath = getFixturePath('.eslintcache');
-                                await doDelete(cacheFilePath);
-                                assert
-                                (
-                                    !await fileExists(cacheFilePath),
-                                    'the cache file already exists and wasn\'t successfully ' +
-                                    'deleted',
-                                );
-
-                                eslint =
-                                await ESLint.fromCLIOptions
-                                (
-                                    {
-                                        cwd:            join(fixtureDir, '..'),
-                                        // specifying cache true the cache will be created
-                                        cache:          true,
-                                        cacheLocation:  cacheFilePath,
-                                        cacheStrategy:  'metadata',
-                                        rule:
-                                        {
-                                            'no-console':       0,
-                                            'no-unused-vars':   2,
-                                        },
-                                    },
-                                );
-                                const badFile = getFixturePath('cache/src', 'fail-file.js');
-                                const goodFile = getFixturePath('cache/src', 'test-file.js');
-                                await eslint.lintParallel([badFile, goodFile]);
-                                let fileCache = fCache.createFromFile(cacheFilePath);
-                                const entries = fileCache.normalizeEntries([badFile, goodFile]);
-
-                                entries.forEach
-                                (
-                                    entry =>
-                                    {
-                                        assert
-                                        (
-                                            entry.changed === false,
-                                            `the entry for ${entry.key} should have been ` +
-                                            'initially unchanged',
-                                        );
-                                    },
-                                );
-
-                                // this should result in a changed entry
-                                const now = new Date();
-                                await utimes(goodFile, now, now);
-                                fileCache = fCache.createFromFile(cacheFilePath);
-
-                                assert
-                                (
-                                    fileCache.getFileDescriptor(badFile).changed === false,
-                                    `the entry for ${badFile} should have been unchanged`,
-                                );
-                                assert
-                                (
-                                    fileCache.getFileDescriptor(goodFile).changed === true,
-                                    `the entry for ${goodFile} should have been changed`,
-                                );
-                            },
-                        );
-
-                        it
-                        (
-                            'should not detect changes using a file\'s modification time when ' +
-                            'set to \'content\'',
-                            async () =>
-                            {
-                                cacheFilePath = getFixturePath('.eslintcache');
-                                await doDelete(cacheFilePath);
-                                assert
-                                (
-                                    !await fileExists(cacheFilePath),
-                                    'the cache file already exists and wasn\'t successfully ' +
-                                    'deleted',
-                                );
-
-                                eslint =
-                                await ESLint.fromCLIOptions
-                                (
-                                    {
-                                        cwd:            join(fixtureDir, '..'),
-                                        // specifying cache true the cache will be created
-                                        cache:          true,
-                                        cacheLocation:  cacheFilePath,
-                                        cacheStrategy:  'content',
-                                        rule:
-                                        {
-                                            'no-console':       0,
-                                            'no-unused-vars':   2,
-                                        },
-                                    },
-                                );
-                                const badFile = getFixturePath('cache/src', 'fail-file.js');
-                                const goodFile = getFixturePath('cache/src', 'test-file.js');
-                                await eslint.lintParallel([badFile, goodFile]);
-                                let fileCache = fCache.createFromFile(cacheFilePath, true);
-                                let entries = fileCache.normalizeEntries([badFile, goodFile]);
-
-                                entries.forEach
-                                (
-                                    entry =>
-                                    {
-                                        assert
-                                        (
-                                            entry.changed === false,
-                                            `the entry for ${entry.key} should have been ` +
-                                            'initially unchanged',
-                                        );
-                                    },
-                                );
-
-                                // this should NOT result in a changed entry
-                                const now = new Date();
-                                await utimes(goodFile, now, now);
-                                fileCache = fCache.createFromFile(cacheFilePath, true);
-                                entries = fileCache.normalizeEntries([badFile, goodFile]);
-
-                                entries.forEach
-                                (
-                                    entry =>
-                                    {
-                                        assert
-                                        (
-                                            entry.changed === false,
-                                            `the entry for ${entry.key} should have remained ` +
-                                            'unchanged',
-                                        );
-                                    },
-                                );
-                            },
-                        );
-
-                        it
-                        (
-                            'should detect changes using a file\'s contents when set to ' +
-                            '\'content\'',
-                            async () =>
-                            {
-                                cacheFilePath = getFixturePath('.eslintcache');
-                                await doDelete(cacheFilePath);
-                                assert
-                                (
-                                    !await fileExists(cacheFilePath),
-                                    'the cache file already exists and wasn\'t successfully ' +
-                                    'deleted',
-                                );
-
-                                eslint =
-                                await ESLint.fromCLIOptions
-                                (
-                                    {
-                                        cwd:            join(fixtureDir, '..'),
-                                        // specifying cache true the cache will be created
-                                        cache:          true,
-                                        cacheLocation:  cacheFilePath,
-                                        cacheStrategy:  'content',
-                                        rule:
-                                        {
-                                            'no-console':       0,
-                                            'no-unused-vars':   2,
-                                        },
-                                    },
-                                );
-                                const badFile = getFixturePath('cache/src', 'fail-file.js');
-                                const goodFile = getFixturePath('cache/src', 'test-file.js');
-                                const goodFileCopy =
-                                join(`${dirname(goodFile)}`, 'test-file-copy.js');
-                                await copyFile(goodFile, goodFileCopy);
-                                await eslint.lintParallel([badFile, goodFileCopy]);
-                                let fileCache = fCache.createFromFile(cacheFilePath, true);
-                                const entries = fileCache.normalizeEntries([badFile, goodFileCopy]);
-
-                                entries.forEach
-                                (
-                                    entry =>
-                                    {
-                                        assert
-                                        (
-                                            entry.changed === false,
-                                            `the entry for ${entry.key} should have been ` +
-                                            'initially unchanged',
-                                        );
-                                    },
-                                );
-
-                                // this should result in a changed entry
-                                const oldContent = await readFile(goodFileCopy, 'utf8');
-                                await writeFile(goodFileCopy, oldContent.replace('abc', 'xyz'));
-                                fileCache = fCache.createFromFile(cacheFilePath, true);
-
-                                assert
-                                (
-                                    fileCache.getFileDescriptor(badFile).changed === false,
-                                    `the entry for ${badFile} should have been unchanged`,
-                                );
-                                assert
-                                (
-                                    fileCache.getFileDescriptor(goodFileCopy).changed === true,
-                                    `the entry for ${goodFileCopy} should have been changed`,
-                                );
-                            },
-                        );
-                    },
-                );
-            },
-        );
-
-        describe
-        (
             'processors',
             () =>
             {
@@ -4022,6 +3024,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 config: 'fixtures/eslint-config-test-processor-1.js',
                                 cwd:    join(fixtureDir, '..'),
                             },
@@ -4046,6 +3049,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 config: 'fixtures/eslint-config-test-processor-2.js',
                                 cwd:    join(fixtureDir, '..'),
                             },
@@ -4072,7 +3076,14 @@ describe
                 (
                     async () =>
                     {
-                        eslint = await ESLint.fromCLIOptions({ cwd: getFixturePath('cli-engine') });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd: getFixturePath('cli-engine'),
+                            },
+                        );
                     },
                 );
 
@@ -4083,7 +3094,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['non-exist.js']); },
+                            eslint.lintParallel(['non-exist.js']),
                             /No files matching 'non-exist\.js' were found\./u,
                         );
                     },
@@ -4096,10 +3107,7 @@ describe
                     {
                         await mkdir(getFixturePath('cli-engine/empty'), { recursive: true });
                         await assert.rejects
-                        (
-                            async () => { await eslint.lintParallel(['empty']); },
-                            /No files matching 'empty' were found\./u,
-                        );
+                        (eslint.lintParallel(['empty']), /No files matching 'empty' were found\./u);
                     },
                 );
 
@@ -4110,7 +3118,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['non-exist/**/*.js']); },
+                            eslint.lintParallel(['non-exist/**/*.js']),
                             /No files matching 'non-exist\/\*\*\/\*\.js' were found\./u,
                         );
                     },
@@ -4123,7 +3131,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['aaa.js', 'bbb.js']); },
+                            eslint.lintParallel(['aaa.js', 'bbb.js']),
                             /No files matching 'aaa\.js' were found\./u,
                         );
                     },
@@ -4136,8 +3144,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () =>
-                            { await eslint.lintParallel(['console.js', 'non-exist.js']); },
+                            eslint.lintParallel(['console.js', 'non-exist.js']),
                             /No files matching 'non-exist\.js' were found\./u,
                         );
                     },
@@ -4151,7 +3158,7 @@ describe
                     {
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['*.js', 'non-exist/*.js']); },
+                            eslint.lintParallel(['*.js', 'non-exist/*.js']),
                             /No files matching 'non-exist\/\*\.js' were found\./u,
                         );
                     },
@@ -4164,7 +3171,7 @@ describe
             'multiple processors',
             () =>
             {
-                const root = join(tmpdir(), 'eslint/eslint/multiple-processors');
+                const root = join(tmpDir, 'eslint/eslint/multiple-processors');
                 let commonFiles;
 
                 // unique directory for each test to avoid quirky disk-cleanup errors
@@ -4274,9 +3281,11 @@ describe
                             },
                         );
                         await teardown.prepare();
-                        eslint = await ESLint.fromCLIOptions
+                        eslint =
+                        await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -4337,6 +3346,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 overrideConfig: { files: ['**/*.html'] },
                                 configLookup:   true,
@@ -4402,6 +3412,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 overrideConfig: { files: ['**/*.html'] },
                                 fix:            true,
@@ -4443,6 +3454,7 @@ describe
                         createCustomTeardown
                         (
                             {
+                                flag,
                                 cwd: join(root, id),
                                 files:
                                 {
@@ -4486,6 +3498,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 overrideConfig: { files: ['**/*.html'] },
                                 configLookup:   true,
@@ -4560,6 +3573,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 overrideConfig: { files: ['**/*.html'] },
                                 configLookup:   true,
@@ -4611,16 +3625,18 @@ describe
                             },
                         );
                         await teardown.prepare();
-                        eslint = await ESLint.fromCLIOptions
+                        eslint =
+                        await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
                         );
                         await assert.rejects
                         (
-                            async () => { await eslint.lintParallel(['test.md']); },
+                            eslint.lintParallel(['test.md']),
                             /Key "processor": Could not find "unknown" in plugin "markdown"/u,
                         );
                     },
@@ -4673,6 +3689,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -4709,6 +3726,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -4766,6 +3784,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -4832,6 +3851,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -4877,6 +3897,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -4922,6 +3943,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -4967,6 +3989,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -5012,6 +4035,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -5057,6 +4081,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -5094,6 +4119,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -5131,6 +4157,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd:            teardown.getPath(),
                                 configLookup:   true,
                             },
@@ -5173,6 +4200,7 @@ describe
                                 await ESLint.fromCLIOptions
                                 (
                                     {
+                                        flag,
                                         cwd:                                    teardown.getPath(),
                                         reportUnusedDisableDirectivesSeverity:  'off',
                                         configLookup:                           true,
@@ -5211,6 +4239,7 @@ describe
                                 await ESLint.fromCLIOptions
                                 (
                                     {
+                                        flag,
                                         cwd:                            teardown.getPath(),
                                         reportUnusedDisableDirectives:  true,
                                         configLookup:                   true,
@@ -5240,15 +4269,15 @@ describe
             'should throw if non-boolean value is given to \'options.warnIgnored\' option',
             async () =>
             {
-                eslint = await ESLint.fromCLIOptions();
+                eslint = await ESLint.fromCLIOptions({ flag });
                 await assert.rejects
                 (
-                    () => eslint.lintParallel(777),
+                    eslint.lintParallel(777),
                     /'patterns' must be a non-empty string or an array of non-empty strings/u,
                 );
                 await assert.rejects
                 (
-                    () => eslint.lintParallel([null]),
+                    eslint.lintParallel([null]),
                     /'patterns' must be a non-empty string or an array of non-empty strings/u,
                 );
             },
@@ -5269,6 +4298,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 configLookup: true,
                             },
@@ -5292,6 +4322,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 configLookup: true,
                             },
@@ -5316,6 +4347,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 configLookup: true,
                             },
@@ -5337,6 +4369,7 @@ describe
                         await ESLint.fromCLIOptions
                         (
                             {
+                                flag,
                                 cwd,
                                 configLookup: true,
                             },
@@ -5359,7 +4392,7 @@ describe
             {
                 const typeModule = JSON.stringify({ type: 'module' }, null, 2);
                 const typeCommonJS = JSON.stringify({ type: 'commonjs' }, null, 2);
-                const flag = ['unstable_ts_config'];
+                const newFlag = [...flag, 'unstable_ts_config'];
 
                 it
                 (
@@ -5372,8 +4405,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -5398,8 +4431,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -5424,8 +4457,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -5471,8 +4504,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -5518,8 +4551,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -5565,17 +4598,418 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
-
                         const results = await eslint.lintParallel(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 1);
                         assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should load eslint.config.ts with CJS syntax, "type": "module" in nearest ' +
+                    '`package.json` and top-level await syntax',
+                    async () =>
+                    {
+                        const cwd =
+                        getFixturePath
+                        (
+                            'ts-config-files',
+                            'ts',
+                            'with-type-module',
+                            'CJS-syntax',
+                            'top-level-await',
+                        );
+                        const config = [{ rules: { 'no-undef': 2 } }];
+                        const configFileContent =
+                        `
+                        import type { FlatConfig } from "../../../../helper";
+                        module.exports =
+                        await Promise.resolve(${JSON.stringify(config, null, 2)}) satisfies
+                        FlatConfig[];
+                        `;
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd,
+                                files:
+                                {
+                                    'package.json':     typeModule,
+                                    'eslint.config.ts': configFileContent,
+                                    'foo.js':           'foo;',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['foo.js']);
+
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should load eslint.config.ts with CJS syntax, "type": "commonjs" in nearest ' +
+                    '`package.json` and top-level await syntax',
+                    async () =>
+                    {
+                        const cwd =
+                        getFixturePath
+                        (
+                            'ts-config-files',
+                            'ts',
+                            'with-type-commonjs',
+                            'CJS-syntax',
+                            'top-level-await',
+                        );
+                        const config = [{ rules: { 'no-undef': 2 } }];
+                        const configFileContent =
+                        `
+                        import type { FlatConfig } from "../../../../helper";
+                        module.exports =
+                        await Promise.resolve(${JSON.stringify(config, null, 2)}) satisfies
+                        FlatConfig[];
+                        `;
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd,
+                                files:
+                                {
+                                    'package.json':     typeCommonJS,
+                                    'eslint.config.ts': configFileContent,
+                                    'foo.js':           'foo;',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['foo.js']);
+
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should load eslint.config.ts with CJS syntax, "type": "module" in nearest ' +
+                    '`package.json` and top-level await syntax (named import)',
+                    async () =>
+                    {
+                        const cwd =
+                        getFixturePath
+                        (
+                            'ts-config-files',
+                            'ts',
+                            'with-type-module',
+                            'top-level-await',
+                            'named-import',
+                        );
+                        const configFileContent =
+                        `
+                        import type { FlatConfig } from "../../../../helper";
+                        const { rules } = await import("./rules");
+                        module.exports = [{ rules }] satisfies FlatConfig[];
+                        `;
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd,
+                                files:
+                                {
+                                    'rules.ts':         'export const rules = { \'no-undef\': 2 };',
+                                    'package.json':     typeModule,
+                                    'eslint.config.ts': configFileContent,
+                                    'foo.js':           'foo;',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['foo.js']);
+
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should load eslint.config.ts with CJS syntax, "type": "commonjs" in nearest ' +
+                    '`package.json` and top-level await syntax (named import)',
+                    async () =>
+                    {
+                        const cwd =
+                        getFixturePath
+                        (
+                            'ts-config-files',
+                            'ts',
+                            'with-type-commonjs',
+                            'top-level-await',
+                            'named-import',
+                        );
+                        const configFileContent =
+                        `
+                        import type { FlatConfig } from "../../../../helper";
+                        const { rules } = await import("./rules");
+                        module.exports = [{ rules }] satisfies FlatConfig[];
+                        `;
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd,
+                                files:
+                                {
+                                    'rules.ts':         `export const rules = ${
+                                    JSON.stringify
+                                    (
+                                        {
+                                            'no-undef': 2,
+                                        }, null, 2,
+                                    )
+                                    };`,
+                                    'package.json':     typeCommonJS,
+                                    'eslint.config.ts': configFileContent,
+                                    'foo.js':           'foo;',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['foo.js']);
+
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should load eslint.config.ts with CJS syntax, "type": "module" in nearest ' +
+                    '`package.json` and top-level await syntax (import default)',
+                    async () =>
+                    {
+                        const cwd =
+                        getFixturePath
+                        (
+                            'ts-config-files',
+                            'ts',
+                            'with-type-module',
+                            'top-level-await',
+                            'import-default',
+                        );
+                        const configFileContent =
+                        `
+                        import type { FlatConfig } from "../../../../helper";
+                        const { default: rules } = await import("./rules");
+                        module.exports = [{ rules }] satisfies FlatConfig[];
+                        `;
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd,
+                                files:
+                                {
+                                    'rules.ts':         'export default { \'no-undef\': 2 };',
+                                    'package.json':     typeModule,
+                                    'eslint.config.ts': configFileContent,
+                                    'foo.js':           'foo;',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['foo.js']);
+
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should load eslint.config.ts with CJS syntax, "type": "commonjs" in nearest ' +
+                    '`package.json` and top-level await syntax (import default)',
+                    async () =>
+                    {
+                        const cwd =
+                        getFixturePath
+                        (
+                            'ts-config-files',
+                            'ts',
+                            'with-type-commonjs',
+                            'top-level-await',
+                            'import-default',
+                        );
+                        const configFileContent =
+                        `
+                        import type { FlatConfig } from "../../../../helper";
+                        const { default: rules } = await import("./rules");
+                        module.exports = [{ rules }] satisfies FlatConfig[];
+                        `;
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd,
+                                files:
+                                {
+                                    'rules.ts':         'export default { \'no-undef\': 2 };',
+                                    'package.json':     typeCommonJS,
+                                    'eslint.config.ts': configFileContent,
+                                    'foo.js':           'foo;',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['foo.js']);
+
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 1);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should load eslint.config.ts with CJS syntax, "type": "module" in nearest ' +
+                    '`package.json` and top-level await syntax (default and named imports)',
+                    async () =>
+                    {
+                        const cwd =
+                        getFixturePath
+                        (
+                            'ts-config-files',
+                            'ts',
+                            'with-type-module',
+                            'top-level-await',
+                            'import-default-and-named',
+                        );
+                        const rulesFileContent =
+                        `
+                        import type { RulesRecord } from "../../../../helper";
+                        export const enum Level { Error = 2, Warn = 1, Off = 0, };
+                        export default { 'no-undef': 2 } satisfies RulesRecord;
+                        `;
+                        const configFileContent =
+                        `
+                        import type { FlatConfig } from "../../../../helper";
+                        const { default: rules, Level } = await import("./rules");
+                        module.exports =
+                        [{ rules: { ...rules, semi: Level.Error } }] satisfies FlatConfig[];
+                        `;
+                        const teardown =
+                        createCustomTeardown
+                        (
+                            {
+                                cwd,
+                                files:
+                                {
+                                    'rules.ts':         rulesFileContent,
+                                    'package.json':     typeModule,
+                                    'eslint.config.ts': configFileContent,
+                                    'foo.js':           'foo',
+                                },
+                            },
+                        );
+                        await teardown.prepare();
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+                        const results = await eslint.lintParallel(['foo.js']);
+
+                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
+                        assert.equal(results.length, 1);
+                        assert.equal(results[0].messages.length, 2);
+                        assert.equal(results[0].messages[0].severity, 2);
+                        assert.equal(results[0].messages[1].severity, 2);
                         assert.equal(results[0].messages[0].ruleId, 'no-undef');
                     },
                 );
@@ -5630,8 +5064,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -5695,8 +5129,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -5754,8 +5188,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -5813,8 +5247,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -5877,11 +5311,10 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
-
                         const results = await eslint.lintParallel(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
@@ -5942,8 +5375,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -6006,8 +5439,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -6070,8 +5503,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -6135,8 +5568,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -6200,8 +5633,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -6268,8 +5701,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -6336,8 +5769,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo.js']);
@@ -6362,8 +5795,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6387,8 +5820,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6413,11 +5846,10 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
+                                flag: newFlag,
                                 config,
                             },
                         );
-
                         const results = await eslint.lintParallel('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), config);
@@ -6439,8 +5871,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6465,8 +5897,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6491,8 +5923,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6516,8 +5948,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6542,8 +5974,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6568,8 +6000,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel('foo.js');
@@ -6590,8 +6022,10 @@ describe
                         const cwd = getFixturePath('ts-config-files', 'wrong-extension');
                         const config = [{ rules: { 'no-undef': 2 } }];
                         const configFileContent =
-                        `import type { FlatConfig } from "../../helper";\nexport default ${
-                        JSON.stringify(config, null, 2)} satisfies FlatConfig[];`;
+                        `
+                        import type { FlatConfig } from "../../helper";
+                        export default ${JSON.stringify(config, null, 2)} satisfies FlatConfig[];
+                        `;
                         const teardown =
                         createCustomTeardown
                         (
@@ -6612,13 +6046,13 @@ describe
                             {
                                 cwd,
                                 config: 'eslint.config.mcts',
-                                flag,
+                                flag:   newFlag,
                             },
                         );
 
                         assert.equal
                         (await eslint.findConfigFile(), join(cwd, 'eslint.config.mcts'));
-                        await assert.rejects(() => eslint.lintParallel(['foo.js']));
+                        await assert.rejects(eslint.lintParallel(['foo.js']));
                     },
                 );
 
@@ -6633,12 +6067,13 @@ describe
                         (
                             {
                                 cwd,
+                                flag,
                                 config: 'eslint.config.ts',
                             },
                         );
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        await assert.rejects(() => eslint.lintParallel(['foo.js']));
+                        await assert.rejects(eslint.lintParallel(['foo.js']));
                     },
                 );
 
@@ -6654,6 +6089,7 @@ describe
                         (
                             {
                                 cwd,
+                                flag,
                                 configLookup: true,
                             },
                         );
@@ -6675,8 +6111,8 @@ describe
                         (
                             {
                                 cwd,
-                                flag,
-                                configLookup: true,
+                                flag:           newFlag,
+                                configLookup:   true,
                             },
                         );
                         const results = await eslint.lintParallel(['foo*.js']);
@@ -6720,6 +6156,7 @@ describe
                     await ESLint.fromCLIOptions
                     (
                         {
+                            flag,
                             concurrency,
                             cwd,
                             plugin:                     ['boom'],
@@ -6756,19 +6193,53 @@ describe
                 }
             },
         );
+
+        describe
+        (
+            'Error while globbing',
+            () =>
+            {
+                it
+                (
+                    'should throw an error with a glob pattern if an invalid config was provided',
+                    async () =>
+                    {
+                        const cwd = getFixturePath('files');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd,
+                                overrideConfig: [{ invalid: 'foobar' }],
+                            },
+                        );
+                        await assert.rejects(eslint.lintParallel('*.js'));
+                    },
+                );
+            },
+        );
     },
 );
 
-describe
+(
+    (title, fn) =>
+    {
+        describe(title, () => fn([]));
+        describe
+        (
+            `${title} with flag unstable_config_lookup_from_file`,
+            () => fn(['unstable_config_lookup_from_file']),
+        );
+    }
+)
 (
     'Fix Types',
-    () =>
+    flag =>
     {
         let eslint;
 
-        before(setUpFixtures);
-
-        after(tearDownFixtures);
+        useFixtures();
 
         it
         (
@@ -6777,18 +6248,15 @@ describe
             {
                 await assert.rejects
                 (
-                    async () =>
-                    {
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd:        join(fixtureDir, '..'),
-                                fix:        true,
-                                fixType:    ['layou'],
-                            },
-                        );
-                    },
+                    ESLint.fromCLIOptions
+                    (
+                        {
+                            flag,
+                            cwd:        join(fixtureDir, '..'),
+                            fix:        true,
+                            fixType:    ['layou'],
+                        },
+                    ),
                     {
                         message:
                         'Invalid Options:\n' +
@@ -6808,6 +6276,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         cwd:        join(fixtureDir, '..'),
                         fix:        false,
                         fixType:    ['layout'],
@@ -6835,6 +6304,7 @@ describe
                             await ESLint.fromCLIOptions
                             (
                                 {
+                                    flag,
                                     cwd:        join(fixtureDir, '..'),
                                     fix:        true,
                                     fixType:    ['layout'],
@@ -6870,6 +6340,7 @@ describe
                             await ESLint.fromCLIOptions
                             (
                                 {
+                                    flag,
                                     cwd:        join(fixtureDir, '..'),
                                     fix:        true,
                                     fixType:    ['suggestion'],
@@ -6907,6 +6378,7 @@ describe
                             await ESLint.fromCLIOptions
                             (
                                 {
+                                    flag,
                                     cwd:        join(fixtureDir, '..'),
                                     fix:        true,
                                     fixType:    ['suggestion', 'layout'],
@@ -6931,14 +6403,22 @@ describe
     },
 );
 
-describe
+(
+    (title, fn) =>
+    {
+        describe(title, () => fn([]));
+        describe
+        (
+            `${title} with flag unstable_config_lookup_from_file`,
+            () => fn(['unstable_config_lookup_from_file']),
+        );
+    }
+)
 (
     'Use stats option',
-    () =>
+    flag =>
     {
-        before(setUpFixtures);
-
-        after(tearDownFixtures);
+        useFixtures();
 
         it
         (
@@ -6949,6 +6429,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         rule:   { 'no-regex-spaces': 'error' },
                         cwd:    getFixturePath('stats-example'),
                         stats:  true,
@@ -6976,6 +6457,7 @@ describe
                 await ESLint.fromCLIOptions
                 (
                     {
+                        flag,
                         rule:   { 'no-regex-spaces': 'error' },
                         cwd:    getFixturePath('stats-example'),
                         fix:    true,
@@ -7009,6 +6491,1263 @@ describe
     },
 );
 
+describe
+(
+    'cache',
+    () =>
+    {
+        /**
+         * helper method to delete a file without caring about exceptions
+         * @param {string} filePath The file path
+         * @returns {void}
+         */
+        async function doDelete(filePath)
+        {
+            try
+            {
+                await unlink(filePath);
+            }
+            catch
+            {
+                /*
+                 * we don't care if the file didn't exist, since our
+                 * intention was to remove the file
+                 */
+            }
+        }
+
+        /**
+         * hash the given string
+         * @param {string} str the string to hash
+         * @returns {string} the hash
+         */
+        function hash(str)
+        {
+            return murmur(str).result().toString(36);
+        }
+
+        let cacheFilePath;
+        let eslint;
+        let fCache;
+        let murmur;
+
+        useFixtures();
+
+        before
+        (
+            async () =>
+            {
+                const importAsESLint = createImportAs(eslintDirURL);
+                [{ default: fCache }, { default: murmur }] =
+                await Promise.all
+                ([importAsESLint('file-entry-cache'), importAsESLint('imurmurhash')]);
+            },
+        );
+
+        after
+        (
+            () =>
+            {
+                fCache = undefined;
+                murmur = undefined;
+            },
+        );
+
+        beforeEach
+        (() => { cacheFilePath = undefined; });
+
+        afterEach
+        (
+            async () =>
+            {
+                sinon.restore();
+                if (cacheFilePath)
+                    await doDelete(cacheFilePath);
+            },
+        );
+
+        describe
+        (
+            'when cacheLocation is a directory or looks like a directory',
+            () =>
+            {
+                const cwd = getFixturePath();
+
+                /**
+                 * helper method to delete the directory used in testing
+                 * @returns {void}
+                 */
+                async function deleteCacheDir()
+                {
+                    try
+                    {
+                        await rm
+                        (join(cwd, 'tmp/.cacheFileDir/'), { recursive: true, force: true });
+                    }
+                    catch
+                    {
+                        /*
+                         * we don't care if the file didn't exist, since our
+                         * intention was to remove the file
+                         */
+                    }
+                }
+
+                beforeEach(deleteCacheDir);
+
+                afterEach(deleteCacheDir);
+
+                it
+                (
+                    'should create the directory and the cache file inside it when ' +
+                    'cacheLocation ends with a slash',
+                    async () =>
+                    {
+                        assert
+                        (
+                            !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
+                            'the cache directory already exists and wasn\'t successfully ' +
+                            'deleted',
+                        );
+
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                // specifying cache true the cache will be created
+                                cache:          true,
+                                cacheLocation:  './tmp/.cacheFileDir/',
+                                rule:
+                                {
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
+                                },
+                                ignore:         false,
+                            },
+                        );
+                        const file = getFixturePath('cache/src', 'test-file.js');
+                        await eslint.lintParallel([file]);
+
+                        assert
+                        (
+                            await fileExists
+                            (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
+                            'the cache for eslint should have been created',
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should create the cache file inside existing cacheLocation ' +
+                    'directory when cacheLocation ends with a slash',
+                    async () =>
+                    {
+                        assert
+                        (
+                            !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
+                            'the cache directory already exists and wasn\'t successfully ' +
+                            'deleted',
+                        );
+
+                        await mkdir(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                // specifying cache true the cache will be created
+                                cache:          true,
+                                cacheLocation:  './tmp/.cacheFileDir/',
+                                rule:
+                                {
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
+                                },
+                                ignore:         false,
+                            },
+                        );
+                        const file = getFixturePath('cache/src', 'test-file.js');
+                        await eslint.lintParallel([file]);
+
+                        assert
+                        (
+                            await fileExists
+                            (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
+                            'the cache for eslint should have been created',
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should create the cache file inside existing cacheLocation ' +
+                    'directory when cacheLocation doesn\'t end with a path separator',
+                    async () =>
+                    {
+                        assert
+                        (
+                            !await directoryExists(join(cwd, './tmp/.cacheFileDir/')),
+                            'the cache directory already exists and wasn\'t successfully ' +
+                            'deleted',
+                        );
+
+                        await mkdir(join(cwd, './tmp/.cacheFileDir/'), { recursive: true });
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                // specifying cache true the cache will be created
+                                cache:          true,
+                                cacheLocation:  './tmp/.cacheFileDir',
+                                rule:
+                                {
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
+                                },
+                                ignore:         false,
+                            },
+                        );
+                        const file = getFixturePath('cache/src', 'test-file.js');
+                        await eslint.lintParallel([file]);
+
+                        assert
+                        (
+                            await fileExists
+                            (join(cwd, `./tmp/.cacheFileDir/.cache_${hash(cwd)}`)),
+                            'the cache for eslint should have been created',
+                        );
+                    },
+                );
+            },
+        );
+
+        it
+        (
+            'should create the cache file inside cwd when no cacheLocation provided',
+            async () =>
+            {
+                const cwd = getFixturePath('cli-engine');
+                cacheFilePath = join(cwd, '.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cache:  true,
+                        cwd,
+                        rule:   { 'no-console': 0 },
+                        ignore: false,
+                    },
+                );
+                const file = getFixturePath('cli-engine', 'console.js');
+                await eslint.lintParallel([file]);
+
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'the cache for eslint should have been created at provided cwd',
+                );
+            },
+        );
+
+        it
+        (
+            'should invalidate the cache if the overrideConfig changed between executions',
+            async () =>
+            {
+                const cwd = getFixturePath('cache/src');
+                cacheFilePath = join(cwd, '.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd,
+                        // specifying cache true the cache will be created
+                        cache:  true,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                        ignore: false,
+                    },
+                );
+                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                const file = join(cwd, 'test-file.js');
+                const results = await eslint.lintParallel([file]);
+
+                for (const { errorCount, warningCount, readFileCalled } of results)
+                {
+                    assert.equal
+                    (
+                        errorCount + warningCount,
+                        0,
+                        'the file should have passed linting without errors or warnings',
+                    );
+                    assert
+                    (
+                        readFileCalled,
+                        'ESLint should have read the file because there was no cache file',
+                    );
+                }
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'the cache for eslint should have been created',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd,
+                        // specifying cache true the cache will be created
+                        cache:  true,
+                        rule:
+                        {
+                            'no-console':       2,
+                            'no-unused-vars':   2,
+                        },
+                        ignore: false,
+                    },
+                );
+                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                const [newResult] = await eslint.lintParallel([file]);
+
+                assert
+                (
+                    newResult.readFileCalled,
+                    'ESLint should have read the file again because it\'s considered ' +
+                    'changed because the config changed',
+                );
+                assert.equal
+                (
+                    newResult.errorCount,
+                    1,
+                    'since configuration changed the cache should have not been used and ' +
+                    'one error should have been reported',
+                );
+                assert.equal(newResult.messages[0].ruleId, 'no-console');
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'The cache for ESLint should still exist',
+                );
+            },
+        );
+
+        it
+        (
+            'should remember the files from a previous run and do not operate on them if ' +
+            'not changed',
+            async () =>
+            {
+                const cwd = getFixturePath('cache/src');
+                cacheFilePath = join(cwd, '.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd,
+                        // specifying cache true the cache will be created
+                        cache:  true,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                        ignore: false,
+                    },
+                );
+                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                const file = getFixturePath('cache/src', 'test-file.js');
+                const results = await eslint.lintParallel([file]);
+
+                assert
+                (
+                    results[0].readFileCalled,
+                    'ESLint should have read the file because there was no cache file',
+                );
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'the cache for eslint should have been created',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd,
+                        // specifying cache true the cache will be created
+                        cache:  true,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                        ignore: false,
+                    },
+                );
+                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                const cachedResults = await eslint.lintParallel([file]);
+                // assert the file was not processed because the cache was used
+                results[0].readFileCalled = false;
+
+                assert.deepEqual
+                (results, cachedResults, 'the result should have been the same');
+            },
+        );
+
+        it
+        (
+            'when `cacheLocation` is specified, should create the cache file with ' +
+            '`cache:true` and then delete it with `cache:false`',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                const cliOptions =
+                {
+                    // specifying cache true the cache will be created
+                    cache:          true,
+                    cacheLocation:  cacheFilePath,
+                    rule:
+                    {
+                        'no-console':       0,
+                        'no-unused-vars':   2,
+                    },
+                    cwd:            join(fixtureDir, '..'),
+                };
+                eslint = await ESLint.fromCLIOptions(cliOptions);
+                const file = getFixturePath('cache/src', 'test-file.js');
+                await eslint.lintParallel([file]);
+
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'the cache for eslint should have been created',
+                );
+
+                cliOptions.cache = false;
+                eslint = await ESLint.fromCLIOptions(cliOptions);
+                await eslint.lintParallel([file]);
+
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache for eslint should have been deleted since last run did ' +
+                    'not use the cache',
+                );
+            },
+        );
+
+        it
+        (
+            'should not throw an error if the cache file to be deleted does not exist on ' +
+            'a read-only file system',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                // Simulate a read-only file system.
+                sinon.stub(fsPromises, 'unlink').rejects
+                (Object.assign(Error('read-only file system'), { code: 'EROFS' }));
+                const cliOptions =
+                {
+                    // specifying cache false the cache will be deleted
+                    cache:          false,
+                    cacheLocation:  cacheFilePath,
+                    rule:
+                    {
+                        'no-console':       0,
+                        'no-unused-vars':   2,
+                    },
+                    cwd:            join(fixtureDir, '..'),
+                };
+                eslint = await ESLint.fromCLIOptions(cliOptions);
+                const file = getFixturePath('cache/src', 'test-file.js');
+                await eslint.lintParallel([file]);
+
+                assert
+                (
+                    fsPromises.unlink.calledWithExactly(cacheFilePath),
+                    'Expected attempt to delete the cache was not made.',
+                );
+            },
+        );
+
+        it
+        (
+            'should store in the cache a file that has lint messages and a file that ' +
+            'doesn\'t have lint messages',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            join(fixtureDir, '..'),
+                        // specifying cache true the cache will be created
+                        cache:          true,
+                        cacheLocation:  cacheFilePath,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                    },
+                );
+                const badFile = getFixturePath('cache/src', 'fail-file.js');
+                const goodFile = getFixturePath('cache/src', 'test-file.js');
+                const result = await eslint.lintParallel([badFile, goodFile]);
+                const [badFileResult, goodFileResult] = result;
+
+                assert.notEqual
+                (
+                    badFileResult.errorCount + badFileResult.warningCount,
+                    0,
+                    'the bad file should have some lint errors or warnings',
+                );
+                assert.equal
+                (
+                    goodFileResult.errorCount + badFileResult.warningCount,
+                    0,
+                    'the good file should have passed linting without errors or warnings',
+                );
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'the cache for eslint should have been created',
+                );
+
+                const fileCache = fCache.createFromFile(cacheFilePath);
+                const { cache } = fileCache;
+
+                assert.equal
+                (
+                    typeof cache.getKey(goodFile),
+                    'object',
+                    'the entry for the good file should have been in the cache',
+                );
+                assert.equal
+                (
+                    typeof cache.getKey(badFile),
+                    'object',
+                    'the entry for the bad file should have been in the cache',
+                );
+
+                const cachedResult = await eslint.lintParallel([badFile, goodFile]);
+
+                assert.deepEqual
+                (result, cachedResult, 'result should be the same with or without cache');
+            },
+        );
+
+        it
+        (
+            'should not contain in the cache a file that was deleted',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            join(fixtureDir, '..'),
+                        // specifying cache true the cache will be created
+                        cache:          true,
+                        cacheLocation:  cacheFilePath,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                    },
+                );
+                const badFile = getFixturePath('cache/src', 'fail-file.js');
+                const goodFile = getFixturePath('cache/src', 'test-file.js');
+                const toBeDeletedFile = getFixturePath('cache/src', 'file-to-delete.js');
+                await eslint.lintParallel([badFile, goodFile, toBeDeletedFile]);
+                const fileCache = fCache.createFromFile(cacheFilePath);
+                let { cache } = fileCache;
+
+                assert.equal
+                (
+                    typeof cache.getKey(toBeDeletedFile),
+                    'object',
+                    'the entry for the file to be deleted should have been in the cache',
+                );
+
+                // delete the file from the file system
+                await unlink(toBeDeletedFile);
+
+                /*
+                 * file-entry-cache@2.0.0 will remove from the cache deleted files
+                 * even when they were not part of the array of files to be analyzed
+                 */
+                await eslint.lintParallel([badFile, goodFile]);
+
+                cache = JSON.parse(await readFile(cacheFilePath));
+
+                assert.equal
+                (
+                    typeof cache[0][toBeDeletedFile],
+                    'undefined',
+                    'the entry for the file to be deleted should not have been in the ' +
+                    'cache',
+                );
+                // make sure that the previos assertion checks the right place
+                assert.notEqual
+                (
+                    typeof cache[0][badFile],
+                    'undefined',
+                    'the entry for the bad file should have been in the cache',
+                );
+                assert.notEqual
+                (
+                    typeof cache[0][goodFile],
+                    'undefined',
+                    'the entry for the good file should have been in the cache',
+                );
+            },
+        );
+
+        it
+        (
+            'should contain files that were not visited in the cache provided they still ' +
+            'exist',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            join(fixtureDir, '..'),
+                        // specifying cache true the cache will be created
+                        cache:          true,
+                        cacheLocation:  cacheFilePath,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                    },
+                );
+                const badFile = getFixturePath('cache/src', 'fail-file.js');
+                const goodFile = getFixturePath('cache/src', 'test-file.js');
+                const testFile2 = getFixturePath('cache/src', 'test-file2.js');
+                await eslint.lintParallel([badFile, goodFile, testFile2]);
+                let fileCache = fCache.createFromFile(cacheFilePath);
+                let { cache } = fileCache;
+
+                assert.equal
+                (
+                    typeof cache.getKey(testFile2),
+                    'object',
+                    'the entry for the test-file2 should have been in the cache',
+                );
+
+                /*
+                 * we pass a different set of files (minus test-file2)
+                 * previous version of file-entry-cache would remove the non visited
+                 * entries. 2.0.0 version will keep them unless they don't exist
+                 */
+                await eslint.lintParallel([badFile, goodFile]);
+                fileCache = fCache.createFromFile(cacheFilePath);
+                ({ cache } = fileCache);
+
+                assert.equal
+                (
+                    typeof cache.getKey(testFile2),
+                    'object',
+                    'the entry for the test-file2 should have been in the cache',
+                );
+            },
+        );
+
+        it
+        (
+            'should not delete cache when executing on files with --cache flag',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                await writeFile(cacheFilePath, '');
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            join(fixtureDir, '..'),
+                        cache:          true,
+                        cacheLocation:  cacheFilePath,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                    },
+                );
+                const file = getFixturePath('cli-engine', 'console.js');
+
+                assert
+                (await fileExists(cacheFilePath), 'the cache for eslint should exist');
+
+                await eslint.lintParallel([file]);
+
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'the cache for eslint should still exist',
+                );
+            },
+        );
+
+        it
+        (
+            'should delete cache when executing on files without --cache flag',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                // intenationally invalid to additionally make sure it isn't used
+                await writeFile(cacheFilePath, '[]');
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            join(fixtureDir, '..'),
+                        cacheLocation:  cacheFilePath,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                    },
+                );
+                const file = getFixturePath('cli-engine', 'console.js');
+
+                assert
+                (await fileExists(cacheFilePath), 'the cache for eslint should exist');
+
+                await eslint.lintParallel([file]);
+
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache for eslint should have been deleted',
+                );
+            },
+        );
+
+        it
+        (
+            'should use the specified cache file',
+            async () =>
+            {
+                cacheFilePath = resolve('.cache/custom-cache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        // specify a custom cache file
+                        cacheLocation:  cacheFilePath,
+                        // specifying cache true the cache will be created
+                        cache:          true,
+                        rule:
+                        {
+                            'no-console':       0,
+                            'no-unused-vars':   2,
+                        },
+                        cwd:            join(fixtureDir, '..'),
+                    },
+                );
+                const badFile = getFixturePath('cache/src', 'fail-file.js');
+                const goodFile = getFixturePath('cache/src', 'test-file.js');
+                const result = await eslint.lintParallel([badFile, goodFile]);
+
+                assert
+                (
+                    await fileExists(cacheFilePath),
+                    'the cache for eslint should have been created',
+                );
+
+                const fileCache = fCache.createFromFile(cacheFilePath);
+                const { cache } = fileCache;
+
+                assert
+                (
+                    typeof cache.getKey(goodFile) === 'object',
+                    'the entry for the good file should have been in the cache',
+                );
+                assert
+                (
+                    typeof cache.getKey(badFile) === 'object',
+                    'the entry for the bad file should have been in the cache',
+                );
+
+                const cachedResult = await eslint.lintParallel([badFile, goodFile]);
+
+                assert.deepEqual
+                (result, cachedResult, 'result should be the same with or without cache');
+            },
+        );
+
+        // https://github.com/eslint/eslint/issues/13507
+        it
+        (
+            'should not store `usedDeprecatedRules` in the cache file',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                const deprecatedRuleId = 'space-in-parens';
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            join(fixtureDir, '..'),
+                        // specifying cache true the cache will be created
+                        cache:          true,
+                        cacheLocation:  cacheFilePath,
+                        rule:           { [deprecatedRuleId]: 2 },
+                    },
+                );
+                const filePath = getFixturePath('cache/src', 'test-file.js');
+
+                /*
+                 * Run linting on the same file 3 times to cover multiple cases:
+                 *   Run 1: Lint result wasn't already cached.
+                 *   Run 2: Lint result was already cached. The cached lint result is used
+                 *     but the cache is reconciled before the run ends.
+                 *   Run 3: Lint result was already cached. The cached lint result was being
+                 *     used throughout the previous run, so possible mutations in the
+                 *     previous run that occured after the cache was reconciled may have
+                 *     side effects for this run.
+                 */
+                for (let i = 0; i < 3; i++)
+                {
+                    const [result] = await eslint.lintParallel([filePath]);
+
+                    assert
+                    (
+                        result.usedDeprecatedRules &&
+                        result.usedDeprecatedRules.some
+                        (rule => rule.ruleId === deprecatedRuleId),
+                        'the deprecated rule should have been in ' +
+                        'result.usedDeprecatedRules',
+                    );
+                    assert
+                    (
+                        await fileExists(cacheFilePath),
+                        'the cache for eslint should have been created',
+                    );
+
+                    const fileCache = fCache.create(cacheFilePath);
+                    const descriptor = fileCache.getFileDescriptor(filePath);
+
+                    assert
+                    (
+                        typeof descriptor === 'object',
+                        'an entry for the file should have been in the cache file',
+                    );
+                    assert
+                    (
+                        typeof descriptor.meta.results === 'object',
+                        'lint result for the file should have been in its cache entry in ' +
+                        'the cache file',
+                    );
+                    assert
+                    (
+                        typeof descriptor.meta.results.usedDeprecatedRules === 'undefined',
+                        'lint result in the cache file contains `usedDeprecatedRules`',
+                    );
+                }
+            },
+        );
+
+        // https://github.com/eslint/eslint/issues/13507
+        it
+        (
+            'should store `source` as `null` in the cache file if the lint result has ' +
+            '`source` property',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await doDelete(cacheFilePath);
+                assert
+                (
+                    !await fileExists(cacheFilePath),
+                    'the cache file already exists and wasn\'t successfully deleted',
+                );
+
+                eslint =
+                await ESLint.fromCLIOptions
+                (
+                    {
+                        cwd:            join(fixtureDir, '..'),
+                        // specifying cache true the cache will be created
+                        cache:          true,
+                        cacheLocation:  cacheFilePath,
+                        rule:           { 'no-unused-vars': 2 },
+                    },
+                );
+                const filePath = getFixturePath('cache/src', 'fail-file.js');
+
+                /*
+                 * Run linting on the same file 3 times to cover multiple cases:
+                 *   Run 1: Lint result wasn't already cached.
+                 *   Run 2: Lint result was already cached. The cached lint result is used
+                 *     but the cache is reconciled before the run ends.
+                 *   Run 3: Lint result was already cached. The cached lint result was being
+                 *     used throughout the previous run, so possible mutations in the
+                 *     previous run that occured after the cache was reconciled may have
+                 *     side effects for this run.
+                 */
+                for (let i = 0; i < 3; i++)
+                {
+                    const [result] = await eslint.lintParallel([filePath]);
+
+                    assert
+                    (
+                        typeof result.source === 'string',
+                        'the result should have contained the `source` property',
+                    );
+
+                    assert
+                    (
+                        await fileExists(cacheFilePath),
+                        'the cache for eslint should have been created',
+                    );
+
+                    const fileCache = fCache.create(cacheFilePath);
+                    const descriptor = fileCache.getFileDescriptor(filePath);
+
+                    assert
+                    (
+                        typeof descriptor === 'object',
+                        'an entry for the file should have been in the cache file',
+                    );
+                    assert
+                    (
+                        typeof descriptor.meta.results === 'object',
+                        'lint result for the file should have been in its cache entry in ' +
+                        'the cache file',
+                    );
+                    // if the lint result contains `source`, it should be stored as `null`
+                    // in the cache file
+                    assert.equal
+                    (
+                        descriptor.meta.results.source,
+                        null,
+                        'lint result in the cache file contains non-null `source`',
+                    );
+                }
+            },
+        );
+
+        describe
+        (
+            'cacheStrategy',
+            () =>
+            {
+                it
+                (
+                    'should detect changes using a file\'s modification time when set to ' +
+                    '\'metadata\'',
+                    async () =>
+                    {
+                        cacheFilePath = getFixturePath('.eslintcache');
+                        await doDelete(cacheFilePath);
+                        assert
+                        (
+                            !await fileExists(cacheFilePath),
+                            'the cache file already exists and wasn\'t successfully ' +
+                            'deleted',
+                        );
+
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            join(fixtureDir, '..'),
+                                // specifying cache true the cache will be created
+                                cache:          true,
+                                cacheLocation:  cacheFilePath,
+                                cacheStrategy:  'metadata',
+                                rule:
+                                {
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
+                                },
+                            },
+                        );
+                        const badFile = getFixturePath('cache/src', 'fail-file.js');
+                        const goodFile = getFixturePath('cache/src', 'test-file.js');
+                        await eslint.lintParallel([badFile, goodFile]);
+                        let fileCache = fCache.createFromFile(cacheFilePath);
+                        const entries = fileCache.normalizeEntries([badFile, goodFile]);
+
+                        entries.forEach
+                        (
+                            entry =>
+                            {
+                                assert
+                                (
+                                    entry.changed === false,
+                                    `the entry for ${entry.key} should have been ` +
+                                    'initially unchanged',
+                                );
+                            },
+                        );
+
+                        // this should result in a changed entry
+                        const now = new Date();
+                        await utimes(goodFile, now, now);
+                        fileCache = fCache.createFromFile(cacheFilePath);
+
+                        assert
+                        (
+                            fileCache.getFileDescriptor(badFile).changed === false,
+                            `the entry for ${badFile} should have been unchanged`,
+                        );
+                        assert
+                        (
+                            fileCache.getFileDescriptor(goodFile).changed === true,
+                            `the entry for ${goodFile} should have been changed`,
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should not detect changes using a file\'s modification time when ' +
+                    'set to \'content\'',
+                    async () =>
+                    {
+                        cacheFilePath = getFixturePath('.eslintcache');
+                        await doDelete(cacheFilePath);
+                        assert
+                        (
+                            !await fileExists(cacheFilePath),
+                            'the cache file already exists and wasn\'t successfully ' +
+                            'deleted',
+                        );
+
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            join(fixtureDir, '..'),
+                                // specifying cache true the cache will be created
+                                cache:          true,
+                                cacheLocation:  cacheFilePath,
+                                cacheStrategy:  'content',
+                                rule:
+                                {
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
+                                },
+                            },
+                        );
+                        const badFile = getFixturePath('cache/src', 'fail-file.js');
+                        const goodFile = getFixturePath('cache/src', 'test-file.js');
+                        await eslint.lintParallel([badFile, goodFile]);
+                        let fileCache = fCache.createFromFile(cacheFilePath, true);
+                        let entries = fileCache.normalizeEntries([badFile, goodFile]);
+
+                        entries.forEach
+                        (
+                            entry =>
+                            {
+                                assert
+                                (
+                                    entry.changed === false,
+                                    `the entry for ${entry.key} should have been ` +
+                                    'initially unchanged',
+                                );
+                            },
+                        );
+
+                        // this should NOT result in a changed entry
+                        const now = new Date();
+                        await utimes(goodFile, now, now);
+                        fileCache = fCache.createFromFile(cacheFilePath, true);
+                        entries = fileCache.normalizeEntries([badFile, goodFile]);
+
+                        entries.forEach
+                        (
+                            entry =>
+                            {
+                                assert
+                                (
+                                    entry.changed === false,
+                                    `the entry for ${entry.key} should have remained ` +
+                                    'unchanged',
+                                );
+                            },
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should detect changes using a file\'s contents when set to ' +
+                    '\'content\'',
+                    async () =>
+                    {
+                        cacheFilePath = getFixturePath('.eslintcache');
+                        await doDelete(cacheFilePath);
+                        assert
+                        (
+                            !await fileExists(cacheFilePath),
+                            'the cache file already exists and wasn\'t successfully ' +
+                            'deleted',
+                        );
+
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd:            join(fixtureDir, '..'),
+                                // specifying cache true the cache will be created
+                                cache:          true,
+                                cacheLocation:  cacheFilePath,
+                                cacheStrategy:  'content',
+                                rule:
+                                {
+                                    'no-console':       0,
+                                    'no-unused-vars':   2,
+                                },
+                            },
+                        );
+                        const badFile = getFixturePath('cache/src', 'fail-file.js');
+                        const goodFile = getFixturePath('cache/src', 'test-file.js');
+                        const goodFileCopy =
+                        join(`${dirname(goodFile)}`, 'test-file-copy.js');
+                        await copyFile(goodFile, goodFileCopy);
+                        await eslint.lintParallel([badFile, goodFileCopy]);
+                        let fileCache = fCache.createFromFile(cacheFilePath, true);
+                        const entries = fileCache.normalizeEntries([badFile, goodFileCopy]);
+
+                        entries.forEach
+                        (
+                            entry =>
+                            {
+                                assert
+                                (
+                                    entry.changed === false,
+                                    `the entry for ${entry.key} should have been ` +
+                                    'initially unchanged',
+                                );
+                            },
+                        );
+
+                        // this should result in a changed entry
+                        const oldContent = await readFile(goodFileCopy, 'utf8');
+                        await writeFile(goodFileCopy, oldContent.replace('abc', 'xyz'));
+                        fileCache = fCache.createFromFile(cacheFilePath, true);
+
+                        assert
+                        (
+                            fileCache.getFileDescriptor(badFile).changed === false,
+                            `the entry for ${badFile} should have been unchanged`,
+                        );
+                        assert
+                        (
+                            fileCache.getFileDescriptor(goodFileCopy).changed === true,
+                            `the entry for ${goodFileCopy} should have been changed`,
+                        );
+                    },
+                );
+            },
+        );
+    },
+);
+
 // Custom tests
 
 describe
@@ -7018,9 +7757,7 @@ describe
     {
         let eslint;
 
-        before(setUpFixtures);
-
-        after(tearDownFixtures);
+        useFixtures();
 
         it
         (
@@ -7058,9 +7795,7 @@ describe
         let cacheFilePath;
         let eslint;
 
-        before(setUpFixtures);
-
-        after(tearDownFixtures);
+        useFixtures();
 
         afterEach
         (

@@ -220,6 +220,7 @@ describe
                             join(tmpDir, 'eslint.config.mjs'),
                             'export default []; process.emitWarning("\\n⚠\\n");',
                         ),
+                        writeFile(join(tmpDir, 'foo.js'), ''),
                     ],
                 );
                 const { stdout, stderr } =

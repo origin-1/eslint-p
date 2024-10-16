@@ -10,9 +10,9 @@ export default async function (ESLint, eslintDirURL)
     const { prototype } = ESLint;
     const { createLintSingleFile } = prototype;
     prototype.createLintSingleFile =
-    async function ()
+    function ()
     {
-        const lintSingleFile = await createLintSingleFile.call(this);
+        const lintSingleFile = createLintSingleFile.call(this);
         const wrapper =
         async filePath =>
         {
