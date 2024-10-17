@@ -1,6 +1,6 @@
 {
   "name": "eslint-p",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "A drop-in replacement for ESLint 9 featuring multithreaded parallel linting.",
   "license": "ISC",
   "files": [
