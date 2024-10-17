@@ -37,7 +37,7 @@ jobs:
 
         runs-on: [ubuntu-latest]
 
-        node-version: [22.x, 21.x, 20.x, 18.x, '18.18.0']
+        node-version: [23.x, 22.x, 20.x, 18.x, '18.18.0']
 
         include:
           - runs-on: windows-latest
