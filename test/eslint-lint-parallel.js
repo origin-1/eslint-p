@@ -20,7 +20,7 @@ import sinon                                from 'sinon';
 async function getESLint()
 {
     const { ESLint } = await import('eslint');
-    await patchESLint(ESLint, eslintDirURL);
+    await patchESLint(eslintDirURL, ESLint);
     return ESLint;
 }
 
@@ -6788,7 +6788,7 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
                 const file = join(cwd, 'test-file.js');
                 const results = await eslint.lintParallel([file]);
 
@@ -6827,7 +6827,7 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
                 const [newResult] = await eslint.lintParallel([file]);
 
                 assert
@@ -6882,7 +6882,7 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
                 const file = getFixturePath('cache/src', 'test-file.js');
                 const results = await eslint.lintParallel([file]);
 
@@ -6912,13 +6912,18 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.patchESLintModuleURL = '#patch-eslint-with-cache-test';
+                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
                 const cachedResults = await eslint.lintParallel([file]);
-                // assert the file was not processed because the cache was used
-                results[0].readFileCalled = false;
 
                 assert.deepEqual
-                (results, cachedResults, 'the result should have been the same');
+                (
+                    { ...results[0], readFileCalled: undefined },
+                    { ...cachedResults[0], readFileCalled: undefined },
+                    'the result should have been the same',
+                );
+
+                // assert the file was not processed because the cache was used
+                assert(!cachedResults[0].readFileCalled, 'the file should not have been reloaded');
             },
         );
 

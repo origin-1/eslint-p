@@ -1,19 +1,17 @@
 /* eslint no-unused-vars: 'off' */
 
-import path             from 'node:path';
-import createImportAs   from '../lib/create-import-as.js';
+import path from 'node:path';
 
 /** @type {WeakMap<ExtractedConfig, DeprecatedRuleInfo[]>} */
 const usedDeprecatedRulesCache = new WeakMap();
 
-export default async function createProcessLintReport(eslintDirURL, privateMembers)
+export default async function createProcessLintReport(importAsESLint, privateMembers)
 {
-    const importAsESLint = createImportAs(eslintDirURL);
     const [{ getRuleFromConfig }, { Legacy: { ConfigOps: { getRuleSeverity } } }] =
     await Promise.all
     (
         [
-            import(`${eslintDirURL}lib/config/flat-config-helpers.js`),
+            importAsESLint('./lib/config/flat-config-helpers.js'),
             importAsESLint('@eslint/eslintrc'),
         ],
     );

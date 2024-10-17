@@ -45,7 +45,7 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#patch-eslint-with-cache-test": "./test/_utils/patch-eslint-with-cache-test.js"
+    "#create-lint-single-file-with-cache-test": "./test/_utils/create-lint-single-file-with-cache-test.js"
   },
   "type": "module"
 }
