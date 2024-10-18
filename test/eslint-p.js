@@ -211,6 +211,13 @@ describe
             async () =>
             {
                 const tmpDir = await mkdtemp(join(tmpdir(), 'eslint-p-'));
+                const additionalFilePromises = [];
+                for (let index = 1; index < 10; ++index)
+                {
+                    const fileName = `${`${index}`.padStart(2, '0')}.js`;
+                    const promise = writeFile(join(tmpDir, fileName), '');
+                    additionalFilePromises.push(promise);
+                }
                 await Promise.all
                 (
                     [
@@ -220,7 +227,7 @@ describe
                             join(tmpDir, 'eslint.config.mjs'),
                             'export default []; process.emitWarning("\\n⚠\\n");',
                         ),
-                        writeFile(join(tmpDir, 'foo.js'), ''),
+                        ...additionalFilePromises,
                     ],
                 );
                 const { stdout, stderr } =
