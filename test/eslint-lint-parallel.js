@@ -1,21 +1,21 @@
-import assert                               from 'node:assert/strict';
+import assert                                                   from 'node:assert/strict';
 
 import fsPromises, { copyFile, cp, mkdir, readFile, realpath, rm, stat, unlink, utimes, writeFile }
 from 'node:fs/promises';
 
-import { platform, tmpdir }                 from 'node:os';
+import { platform, tmpdir }                                     from 'node:os';
+import { basename, dirname, extname, join, relative, resolve }  from 'node:path';
+import { setImmediate }                                         from 'node:timers/promises';
+import { fileURLToPath }                                        from 'node:url';
+import { setEnvironmentData }                                   from 'node:worker_threads';
+import createImportAs                                           from '../lib/create-import-as.js';
 
-import { basename, dirname, extname, join, relative, resolve }
-from 'node:path';
+import eslintDirURL
+from '../lib/default-eslint-dir-url.js';
 
-import { setImmediate }                     from 'node:timers/promises';
-import { fileURLToPath }                    from 'node:url';
-import { setEnvironmentData }               from 'node:worker_threads';
-import createImportAs                       from '../lib/create-import-as.js';
-import eslintDirURL                         from '../lib/default-eslint-dir-url.js';
-import patchESLint                          from '../lib/patch-eslint.js';
-import { createCustomTeardown, unIndent }   from './_utils/index.js';
-import sinon                                from 'sinon';
+import patchESLint, { createVerifyTextModuleURLKey }            from '../lib/patch-eslint.js';
+import { createCustomTeardown, unIndent }                       from './_utils/index.js';
+import sinon                                                    from 'sinon';
 
 async function getESLint()
 {
@@ -6788,24 +6788,23 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
+                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
                 const file = join(cwd, 'test-file.js');
                 const results = await eslint.lintParallel([file]);
 
-                for (const { errorCount, warningCount, readFileCalled } of results)
-                {
-                    assert.equal
-                    (
-                        errorCount + warningCount,
-                        0,
-                        'the file should have passed linting without errors or warnings',
-                    );
-                    assert
-                    (
-                        readFileCalled,
-                        'ESLint should have read the file because there was no cache file',
-                    );
-                }
+                assert.equal(results.length, 1);
+                const [{ errorCount, warningCount, verifyTextCallID }] = results;
+                assert.equal
+                (
+                    errorCount + warningCount,
+                    0,
+                    'the file should have passed linting without errors or warnings',
+                );
+                assert
+                (
+                    verifyTextCallID,
+                    'ESLint should have read the file because there was no cache file',
+                );
                 assert
                 (
                     await fileExists(cacheFilePath),
@@ -6827,12 +6826,12 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
+                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
                 const [newResult] = await eslint.lintParallel([file]);
 
                 assert
                 (
-                    newResult.readFileCalled,
+                    newResult.verifyTextCallID && newResult.verifyTextCallID !== verifyTextCallID,
                     'ESLint should have read the file again because it\'s considered ' +
                     'changed because the config changed',
                 );
@@ -6882,13 +6881,13 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
+                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
                 const file = getFixturePath('cache/src', 'test-file.js');
                 const results = await eslint.lintParallel([file]);
 
                 assert
                 (
-                    results[0].readFileCalled,
+                    results[0].verifyTextCallID,
                     'ESLint should have read the file because there was no cache file',
                 );
                 assert
@@ -6912,18 +6911,14 @@ describe
                         ignore: false,
                     },
                 );
-                eslint.createLintSingleFileModuleURL = '#create-lint-single-file-with-cache-test';
+                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
                 const cachedResults = await eslint.lintParallel([file]);
 
-                assert.deepEqual
-                (
-                    { ...results[0], readFileCalled: undefined },
-                    { ...cachedResults[0], readFileCalled: undefined },
-                    'the result should have been the same',
-                );
+                assert.deepEqual(results, cachedResults, 'the result should have been the same');
 
                 // assert the file was not processed because the cache was used
-                assert(!cachedResults[0].readFileCalled, 'the file should not have been reloaded');
+
+                // The value of `verifyTextCallID` on the result did not change.
             },
         );
 

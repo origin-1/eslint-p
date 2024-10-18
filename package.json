@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^1.6.1",
-    "acorn": "^8.12.1",
+    "acorn": "^8.13.0",
     "c8js": "^0.8.0",
     "esprima": "^4.0.1",
     "fs-teardown": "^0.3.2",
@@ -45,7 +45,7 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#create-lint-single-file-with-cache-test": "./test/_utils/create-lint-single-file-with-cache-test.js"
+    "#create-verify-text-with-call-id": "./test/_utils/create-verify-text-with-call-id.js"
   },
   "type": "module"
 }
