@@ -317,13 +317,16 @@ function useFixtures()
                         (
                             {
                                 flag,
-                                cwd:            workDir,
+                                cwd:            getFixturePath('..'),
                                 rule:           { 'no-unused-vars': 2 },
                                 configLookup:   true,
                             },
                         );
                         await assert.rejects
-                        (eslint.lintParallel('no-config-file/*.js'), /Could not find config file/u);
+                        (
+                            eslint.lintParallel('no-config/no-config-file/*.js'),
+                            /Could not find config file/u,
+                        );
                     },
                 );
 
@@ -338,14 +341,14 @@ function useFixtures()
                         (
                             {
                                 flag,
-                                cwd:            workDir,
+                                cwd:            getFixturePath('..'),
                                 rule:           { 'no-unused-vars': 2 },
                                 configLookup:   true,
                             },
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel('no-config-file/foo.js'),
+                            eslint.lintParallel('no-config/no-config-file/foo.js'),
                             /Could not find config file/u,
                         );
                     },
@@ -4266,7 +4269,7 @@ function useFixtures()
 
         it
         (
-            'should throw if non-boolean value is given to \'options.warnIgnored\' option',
+            'should throw if an invalid value is given to \'patterns\' argument',
             async () =>
             {
                 eslint = await ESLint.fromCLIOptions({ flag });
@@ -4393,6 +4396,9 @@ function useFixtures()
                 const typeModule = JSON.stringify({ type: 'module' }, null, 2);
                 const typeCommonJS = JSON.stringify({ type: 'commonjs' }, null, 2);
                 const newFlag = [...flag, 'unstable_ts_config'];
+
+                afterEach
+                (() => { sinon.restore(); });
 
                 it
                 (
@@ -6123,6 +6129,99 @@ function useFixtures()
                         assert.equal(results[0].messages.length, 1);
                         assert.equal(results[0].messages[0].severity, 2);
                         assert.equal(results[0].messages[0].ruleId, 'no-undef');
+                    },
+                );
+
+                it
+                (
+                    'should fail to load a TS config file if jiti is not installed',
+                    async () =>
+                    {
+                        const { ConfigLoader } =
+                        await import(`${eslintDirURL}lib/config/config-loader.js`);
+                        sinon.stub(ConfigLoader, 'loadJiti').rejects();
+                        const cwd = getFixturePath('ts-config-files', 'ts');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+
+                        await assert.rejects
+                        (
+                            eslint.lintParallel('foo.js'),
+                            {
+                                message:
+                                'The \'jiti\' library is required for loading TypeScript ' +
+                                'configuration files. Make sure to install it.',
+                            },
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should fail to load a TS config file if an outdated version of jiti is ' +
+                    'installed',
+                    async () =>
+                    {
+                        const { ConfigLoader } =
+                        await import(`${eslintDirURL}lib/config/config-loader.js`);
+                        sinon.stub(ConfigLoader, 'loadJiti').resolves({ });
+                        const cwd = getFixturePath('ts-config-files', 'ts');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:           newFlag,
+                                configLookup:   true,
+                            },
+                        );
+
+                        await assert.rejects
+                        (
+                            eslint.lintParallel('foo.js'),
+                            {
+                                message:
+                                'You are using an outdated version of the \'jiti\' library. ' +
+                                'Please update to the latest version of \'jiti\' to ensure ' +
+                                'compatibility and access to the latest features.',
+                            },
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should fail to load a CommonJS TS config file that exports undefined with a ' +
+                    'helpful error message',
+                    async () =>
+                    {
+                        const cwd = getFixturePath('ts-config-files', 'ts');
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                cwd,
+                                flag:   newFlag,
+                                config: 'eslint.undefined.config.ts',
+                            },
+                        );
+
+                        await assert.rejects
+                        (
+                            eslint.lintParallel('foo.js'),
+                            {
+                                message:
+                                'Config (unnamed): Unexpected undefined config at user-defined ' +
+                                'index 0.',
+                            },
+                        );
                     },
                 );
             },
