@@ -6,7 +6,7 @@ A drop-in replacement for ESLint 9 featuring multithreaded parallel linting.
 
 ## Usage
 
-All ESLint options are supported, plus `--concurrency` to specify the number of linting threads explicitly.
+All [ESLint CLI options](https://eslint.org/docs/latest/use/command-line-interface#options) are supported, plus `--concurrency` to specify the number of linting threads explicitly.
 
 Example:
 
@@ -14,7 +14,15 @@ Example:
 npx eslint-p --fix --concurrency=4
 ```
 
-If not specified, the number of linting threads is calculated automatically.
+Valid values for the `--concurrency` option are:
+
+* **positive integers (e.g. `4`)**:
+  Maximum number of linting threads. The effective number of threads can be lower when linting only a few files.
+* **`auto`**:
+  Choose number of linting threads automatically (default).
+* **`off`**:
+  No multithreading, run like ESLint. This is not the same as `--concurrency=1`.
+
 Normally, a performance improvement will be only noticeable on systems with 4 or more CPUs.
 
 [npm badge]: https://img.shields.io/npm/v/eslint-p?logo=npm

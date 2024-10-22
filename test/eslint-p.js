@@ -40,8 +40,8 @@ describe
                 (
                     stdout.endsWith
                     (
-                        '--concurrency Int               Number of linting threads or 0 to ' +
-                        'calculate automatically - default: 0\n',
+                        '--concurrency Int|String        Number of linting threads, auto to ' +
+                        'choose automatically, off to disable mulithreading - default: auto\n',
                     ),
                 );
             },

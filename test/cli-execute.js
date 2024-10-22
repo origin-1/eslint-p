@@ -79,19 +79,6 @@ describe
 
         afterEach(() => sinon.restore());
 
-        it
-        (
-            'should return with exit code 2 if flat config mode is not enabled',
-            async () =>
-            {
-                sinon.define(process.env, 'ESLINT_USE_FLAT_CONFIG', 'false');
-                const exitCode = await execute('');
-
-                assert.equal(log.error.callCount, 1);
-                assert.equal(exitCode, 2);
-            },
-        );
-
         describe
         (
             'execute()',
@@ -256,7 +243,7 @@ describe
                                     rulesMeta:  { },
                                 };
 
-                                assert.deepStrictEqual(metadata, expectedMetadata);
+                                assert.deepEqual(metadata, expectedMetadata);
                             },
                         );
                     },
@@ -284,7 +271,7 @@ describe
 
                                 const { metadata } = JSON.parse(log.info.args[0][0]);
 
-                                assert.deepStrictEqual
+                                assert.deepEqual
                                 (
                                     metadata.maxWarningsExceeded,
                                     { maxWarnings: 1, foundWarnings: 2 },
@@ -761,8 +748,7 @@ describe
                                 const configPath = getFixturePath('eslint.config-rule-throws.js');
                                 const cliArgs =
                                 `--quiet --max-warnings=1 --config ${configPath}' ${filePath}`;
-                                await assert.rejects
-                                (async () => { await execute(cliArgs); });
+                                await assert.rejects(execute(cliArgs));
                             },
                         );
                     },
@@ -784,8 +770,7 @@ describe
                                 const globPattern = 'unmatched*.js';
                                 await assert.rejects
                                 (
-                                    async () =>
-                                    { await execute(`"${filePath}/${globPattern}"`); },
+                                    execute(`"${filePath}/${globPattern}"`),
                                     Error
                                     (
                                         `No files matching '${filePath}/${globPattern}' were ` +
@@ -1128,10 +1113,7 @@ describe
                                 `All files matched by '${filePath.replace(/\\/gu, '/')}' are ` +
                                 'ignored.';
                                 await assert.rejects
-                                (
-                                    async () => { await execute(`${options} ${filePath}`); },
-                                    Error(expectedMessage),
-                                );
+                                (execute(`${options} ${filePath}`), Error(expectedMessage));
                             },
                         );
 
@@ -1277,9 +1259,7 @@ describe
                                         assert.equal(exit, 0);
                                         await assert.rejects
                                         (
-                                            async () =>
-                                            await execute
-                                            ('**/*.js --ignore-pattern subsubdir/*.js'),
+                                            execute('**/*.js --ignore-pattern subsubdir/*.js'),
                                             /All files matched by '\*\*\/\*\.js' are ignored/u,
                                         );
                                     },
@@ -1295,8 +1275,7 @@ describe
                                         ('cli/ignore-pattern-relative/subdir/subsubdir');
                                         await assert.rejects
                                         (
-                                            async () =>
-                                            await execute('**/*.js --ignore-pattern *.js'),
+                                            execute('**/*.js --ignore-pattern *.js'),
                                             /All files matched by '\*\*\/\*\.js' are ignored/u,
                                         );
                                     },
@@ -1353,7 +1332,7 @@ describe
                         const filePath = getFixturePath('passing.js');
                         await assert.rejects
                         (
-                            async () => await execute(`--no-ignore --parser test111 ${filePath}`),
+                            execute(`--no-ignore --parser test111 ${filePath}`),
                             'Cannot find module \'test111\'',
                         );
                     },
@@ -2111,7 +2090,7 @@ describe
 
                         assert.equal(log.info.callCount, 0, 'log.info should not be called');
                         assert.equal(log.error.callCount, 1, 'log.error should be called once');
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (
                             log.error.firstCall.args,
                             [
@@ -2143,7 +2122,7 @@ describe
 
                         assert.equal(log.info.callCount, 0, 'log.info should not be called');
                         assert.equal(log.error.callCount, 1, 'log.error should be called once');
-                        assert.deepStrictEqual
+                        assert.deepEqual
                         (
                             log.error.firstCall.args,
                             [
@@ -2349,10 +2328,7 @@ describe
                         const input = `--flag test_only_oldx --config ${configPath} ${filePath}`;
 
                         await assert.rejects
-                        (
-                            execute(input),
-                            { message: 'Unknown flag \'test_only_oldx\'.' },
-                        );
+                        (execute(input), { message: 'Unknown flag \'test_only_oldx\'.' });
                     },
                 );
 
@@ -2394,6 +2370,99 @@ describe
                             ),
                             /Could not find config file/u,
                         );
+                    },
+                );
+            },
+        );
+
+        // Custom tests
+
+        it
+        (
+            'should return with exit code 2 if flat config mode is not enabled',
+            async () =>
+            {
+                sinon.define(process.env, 'ESLINT_USE_FLAT_CONFIG', 'false');
+                const exitCode = await execute('');
+
+                assert.equal(log.error.callCount, 1);
+                assert.equal(exitCode, 2);
+            },
+        );
+
+        describe
+        (
+            '`--concurrency` option',
+            () =>
+            {
+                let originalCwd;
+
+                beforeEach
+                (
+                    () =>
+                    {
+                        originalCwd = process.cwd();
+                        process.chdir(getFixturePath());
+                    },
+                );
+
+                afterEach
+                (
+                    () =>
+                    {
+                        process.chdir(originalCwd);
+                        originalCwd = undefined;
+                    },
+                );
+
+                it
+                (
+                    '`--concurrency=auto`',
+                    async () =>
+                    {
+                        sinon.spy(ESLint.prototype, 'lintFiles');
+                        const exitCode = await execute('--concurrency=auto passing.js');
+
+                        assert(log.error.notCalled);
+                        assert(ESLint.prototype.lintFiles.notCalled);
+                        assert.equal(exitCode, 0);
+                    },
+                );
+
+                it
+                (
+                    '`--concurrency=off`',
+                    async () =>
+                    {
+                        sinon.spy(ESLint.prototype, 'lintFiles');
+                        const exitCode = await execute('--concurrency=off passing.js');
+
+                        assert(log.error.notCalled);
+                        assert(ESLint.prototype.lintFiles.called);
+                        assert.equal(exitCode, 0);
+                    },
+                );
+
+                it
+                (
+                    'invalid `--concurrency`',
+                    async () =>
+                    {
+                        const exitCode = await execute('--concurrency=invalid passing.js');
+
+                        assert.deepEqual
+                        (
+                            log.error.firstCall.args,
+                            [
+                                'Invalid value for option \'concurrency\' - expected a positive ' +
+                                'integer, auto or off, received value: invalid.\n' +
+                                'You\'re using eslint.config.js, some command line flags are no ' +
+                                'longer available. Please see ' +
+                                'https://eslint.org/docs/latest/use/command-line-interface for ' +
+                                'details.',
+                            ],
+                        );
+                        assert.equal(exitCode, 2);
                     },
                 );
             },
