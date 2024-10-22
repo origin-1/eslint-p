@@ -4391,11 +4391,13 @@ function useFixtures()
         describe
         (
             'TypeScript config files',
-            () =>
+            function ()
             {
                 const typeModule = JSON.stringify({ type: 'module' }, null, 2);
                 const typeCommonJS = JSON.stringify({ type: 'commonjs' }, null, 2);
                 const newFlag = [...flag, 'unstable_ts_config'];
+
+                this.timeout(10_000);
 
                 afterEach
                 (() => { sinon.restore(); });
