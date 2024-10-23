@@ -2090,16 +2090,16 @@ describe
 
                         assert.equal(log.info.callCount, 0, 'log.info should not be called');
                         assert.equal(log.error.callCount, 1, 'log.error should be called once');
+                        const { name, version } = await import('../lib/package-info.js');
+                        const expectedURL =
+                        `https://www.npmjs.com/package/${name}/v/${version}#usage`;
                         assert.deepEqual
                         (
                             log.error.firstCall.args,
                             [
                                 'Option report-unused-disable-directives-severity: \'foo\' not ' +
                                 'one of off, warn, error, 0, 1, or 2.\n' +
-                                'You\'re using eslint.config.js, some command line flags are no ' +
-                                'longer available. Please see ' +
-                                'https://eslint.org/docs/latest/use/command-line-interface for ' +
-                                'details.',
+                                `Please see ${expectedURL} for details.`,
                             ],
                             'has the right text to log.error',
                         );
@@ -2450,16 +2450,16 @@ describe
                     {
                         const exitCode = await execute('--concurrency=invalid passing.js');
 
+                        const { name, version } = await import('../lib/package-info.js');
+                        const expectedURL =
+                        `https://www.npmjs.com/package/${name}/v/${version}#usage`;
                         assert.deepEqual
                         (
                             log.error.firstCall.args,
                             [
                                 'Invalid value for option \'concurrency\' - expected a positive ' +
                                 'integer, auto or off, received value: invalid.\n' +
-                                'You\'re using eslint.config.js, some command line flags are no ' +
-                                'longer available. Please see ' +
-                                'https://eslint.org/docs/latest/use/command-line-interface for ' +
-                                'details.',
+                                `Please see ${expectedURL} for details.`,
                             ],
                         );
                         assert.equal(exitCode, 2);
