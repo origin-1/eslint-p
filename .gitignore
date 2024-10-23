@@ -1,8 +1,6 @@
 .*
 !.git*
 !.npmrc
-!/test/fixtures/**
-/test/fixtures/**/.*
 !/test/fixtures/**/.*/
 !/test/fixtures/**/.*.*
 /coverage/
