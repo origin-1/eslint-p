@@ -10,6 +10,16 @@ import eslintDirURL     from '../lib/default-eslint-dir-url.js';
 import sinon            from 'sinon';
 
 /**
+ * Adjust timeout for a test with two `execute` calls.
+ * @param {Mocha.Context} context The test context.
+ * @returns {void}
+ */
+function doubleExecuteTimeout(context)
+{
+    context.timeout(4000);
+}
+
+/**
  * Returns the path inside of the fixture directory.
  * @param {...string} args file path segments.
  * @returns {string} The path inside the fixture directory.
@@ -491,8 +501,10 @@ describe
                 it
                 (
                     'should not print the results from previous execution',
-                    async () =>
+                    async function ()
                     {
+                        doubleExecuteTimeout(this);
+
                         const filePath = getFixturePath('missing-semicolon.js');
                         await execute(`--no-ignore --rule semi:2 ${filePath}`);
 
@@ -1249,8 +1261,9 @@ describe
                                 (
                                     'should interpret pattern that contains a slash as relative ' +
                                     'to cwd',
-                                    async () =>
+                                    async function ()
                                     {
+                                        doubleExecuteTimeout(this);
                                         process.chdir('cli/ignore-pattern-relative/subdir');
 
                                         /*
@@ -1262,7 +1275,6 @@ describe
                                         await execute('**/*.js --ignore-pattern subdir/**');
 
                                         assert.equal(exit, 0);
-
                                         await assert.rejects
                                         (
                                             async () =>
