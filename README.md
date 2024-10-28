@@ -2,7 +2,7 @@
 
 A drop-in replacement for ESLint 9 featuring multithreaded parallel linting.
 
-**Only flat config is supported!**
+**IMPORTANT:** Legacy eslintrc configuration is not supported.
 
 ## Usage
 
