@@ -24,24 +24,24 @@
     "build-no-install": "npm run clean && npm run make-grabs && npm run lint && npm run coverage",
     "clean": "node dev/clean.js",
     "coverage": "node dev/coverage.js",
-    "lint": "node ./lib/eslint-p.js",
-    "lint:fix": "node ./lib/eslint-p.js --fix",
+    "lint": "node ./lib/eslint-p.js .",
+    "lint:fix": "node ./lib/eslint-p.js --fix .",
     "make-grabs": "node ./dev/make-grabs.js",
     "release": "npm version -m \"release %s\"",
     "test": "mocha test/*.js"
   },
   "dependencies": {
-    "eslint": "9.13.0"
+    "eslint": "9.14.0"
   },
   "devDependencies": {
-    "@origin-1/eslint-config": "^1.6.1",
-    "acorn": "^8.13.0",
+    "@origin-1/eslint-config": "^1.7.1",
+    "acorn": "^8.14.0",
     "c8js": "^0.8.0",
     "esprima": "^4.0.1",
     "fs-teardown": "^0.3.2",
     "globals": "^15.11.0",
-    "jiti": "^2.3.3",
-    "mocha": "^10.7.3",
+    "jiti": "^2.4.0",
+    "mocha": "^10.8.2",
     "sinon": "^19.0.2"
   },
   "engines": {
