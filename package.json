@@ -31,13 +31,14 @@
     "test": "mocha test/*.js",
     "version": "git add CHANGELOG.md"
   },
-  "dependencies": {
-    "eslint": "9.14.0"
+  "peerDependencies": {
+    "eslint": "^9"
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^1.7.1",
     "acorn": "^8.14.0",
     "c8js": "^0.8.0",
+    "eslint": "^9.14.0",
     "esprima": "^4.0.1",
     "fs-teardown": "^0.3.2",
     "globals": "^15.11.0",
