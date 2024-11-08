@@ -2,8 +2,7 @@
 
 A drop-in replacement for ESLint 9 featuring multithreaded parallel linting.
 
-> [!IMPORTANT]
-> Legacy `.eslintrc` configuration is not supported.
+> **IMPORTANT:** Legacy `.eslintrc` configuration is not supported.
 
 ## Installation
 
@@ -38,7 +37,6 @@ Valid values for the `--concurrency` option are:
 * **`off`**:
   No multithreading, run like ESLint. This is not the same as `--concurrency=1`.
 
-> [!NOTE]
 > Normally, a performance improvement **will be only noticeable on systems with 4 or more CPUs.**
 
 ## `ESLint` is installed as dependency
@@ -51,10 +49,9 @@ To check the version of `ESLint` used by this package you can use:
 npx eslint-p -v
 ```
 
-> [!TIP]
-> To avoid inconsistencies your should install the same `eslint` version used by this package or remove you `eslint` entry from your `package.json`.
+To avoid inconsistencies your should install the same `eslint` version used by this package or remove you `eslint` entry from your `package.json`.
 
-[YOu can find more information on this PR](https://github.com/origin-1/eslint-p/pull/1).
+[You can find more information on this PR](https://github.com/origin-1/eslint-p/pull/1).
 
 [npm badge]: https://img.shields.io/npm/v/eslint-p?logo=npm
 [npm URL]: https://www.npmjs.com/package/eslint-p
