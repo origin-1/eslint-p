@@ -6235,18 +6235,19 @@ function useFixtures()
             async () =>
             {
                 let createCallCountArray;
+                const environmentDataKey = 'create-call-count-array';
 
                 function doBefore()
                 {
                     createCallCountArray =
-                    new Uint32Array(new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT));
-                    setEnvironmentData('create-call-count-array', createCallCountArray);
+                    new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+                    setEnvironmentData(environmentDataKey, createCallCountArray);
                 }
 
                 function doAfter()
                 {
                     createCallCountArray = undefined;
-                    setEnvironmentData('create-call-count-array', undefined);
+                    setEnvironmentData(environmentDataKey, undefined);
                 }
 
                 async function doTest()

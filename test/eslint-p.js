@@ -28,13 +28,14 @@ describe
         it
         (
             'with `--help`',
-            async () =>
+            async function ()
             {
                 const { stdout } =
                 await promisify(execFile)
                 (
                     process.execPath,
                     [eslintPPath, '--help'],
+                    { timeout: this.timeout() },
                 );
                 assert
                 (
@@ -50,7 +51,7 @@ describe
         it
         (
             'with `--inspect-config` when the command succeeds',
-            async () =>
+            async function ()
             {
                 const loaderSrc =
                 `
@@ -66,7 +67,7 @@ describe
                 (
                     eslintPPath,
                     ['--inspect-config'],
-                    { execArgv, silent: true },
+                    { execArgv, silent: true, timeout: this.timeout() },
                 );
                 let actualMessage;
                 childProcess.once
@@ -95,7 +96,7 @@ describe
         it
         (
             'with `--inspect-config` and `--flag=unstable_ts_config` when the command succeeds',
-            async () =>
+            async function ()
             {
                 const loaderSrc =
                 `
@@ -112,7 +113,7 @@ describe
                 (
                     eslintPPath,
                     ['--inspect-config', '--flag=unstable_ts_config'],
-                    { cwd, execArgv, silent: true },
+                    { cwd, execArgv, silent: true, timeout: this.timeout() },
                 );
                 let actualMessage;
                 childProcess.once
@@ -141,7 +142,7 @@ describe
         it
         (
             'with `--inspect-config` when the command fails',
-            async () =>
+            async function ()
             {
                 const loaderSrc =
                 `
@@ -157,7 +158,7 @@ describe
                 (
                     eslintPPath,
                     ['--inspect-config'],
-                    { execArgv, silent: true },
+                    { execArgv, silent: true, timeout: this.timeout() },
                 );
                 const exitCode =
                 await new Promise(resolve => { childProcess.once('close', resolve); });
@@ -168,7 +169,7 @@ describe
         it
         (
             'when patchESLint fails',
-            async () =>
+            async function ()
             {
                 const loaderSrc =
                 `
@@ -191,6 +192,7 @@ describe
                 (
                     process.execPath,
                     ['--import', `data:text/javascript,${encodeURI(loaderSrc)}`, eslintPPath],
+                    { timeout: this.timeout() },
                 );
                 await assert.rejects
                 (
@@ -208,16 +210,10 @@ describe
         it
         (
             'should warn only once when a .eslintignore file is present',
-            async () =>
+            async function ()
             {
                 const tmpDir = await mkdtemp(join(tmpdir(), 'eslint-p-'));
-                const additionalFilePromises = [];
-                for (let index = 1; index < 10; ++index)
-                {
-                    const fileName = `${`${index}`.padStart(2, '0')}.js`;
-                    const promise = writeFile(join(tmpDir, fileName), '');
-                    additionalFilePromises.push(promise);
-                }
+                const url = new URL('./fixtures/configurations/load-count.mjs', import.meta.url);
                 await Promise.all
                 (
                     [
@@ -225,9 +221,9 @@ describe
                         writeFile
                         (
                             join(tmpDir, 'eslint.config.mjs'),
-                            'export default []; process.emitWarning("\\n⚠\\n");',
+                            `export { default } from ${JSON.stringify(url)};`,
                         ),
-                        ...additionalFilePromises,
+                        writeFile(join(tmpDir, 'index.js'), ''),
                     ],
                 );
                 const { stdout, stderr } =
@@ -235,7 +231,7 @@ describe
                 (
                     process.execPath,
                     [eslintPPath, '--concurrency=2'],
-                    { cwd: tmpDir },
+                    { cwd: tmpDir, timeout: this.timeout() },
                 );
                 assert.equal(stdout, '');
                 {
