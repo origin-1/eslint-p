@@ -38,12 +38,13 @@ Valid values for the `--concurrency` option are:
   No multithreading, run like ESLint. This is not the same as `--concurrency=1`.
 
 > Normally, a performance improvement **will be only noticeable on systems with 4 or more CPUs**.
+> Some plugins like `typescript-eslint` with type-aware linting can increase the time required to initialize a linting thread resulting in performance degradation when multithreading is used.
 
-## `ESLint` is installed as a dependency
+## ESLint is installed as a dependency
 
 This package has ESLint set as a dependency, so if you already have `eslint` installed, but with a different version than the one specified in the `package.json` of this package you might get inconsistent results between the CLI and the editor.
 
-To check the version of `ESLint` used by this package you can use:
+To check the version of ESLint used by this package you can use:
 
 ```shell
 npx eslint-p -v
