@@ -3,10 +3,12 @@ import assert                                                   from 'node:asser
 import fsPromises, { copyFile, cp, mkdir, readFile, realpath, rm, stat, unlink, utimes, writeFile }
 from 'node:fs/promises';
 
+import { exec }                                                 from 'node:child_process';
 import { platform, tmpdir }                                     from 'node:os';
 import { basename, dirname, extname, join, relative, resolve }  from 'node:path';
 import { setImmediate }                                         from 'node:timers/promises';
 import { fileURLToPath }                                        from 'node:url';
+import { promisify }                                            from 'node:util';
 import { setEnvironmentData }                                   from 'node:worker_threads';
 import createImportAs                                           from '../lib/create-import-as.js';
 
@@ -2285,6 +2287,190 @@ function useFixtures()
                         assert.equal(results[0].messages[0].severity, 1);
                         assert.equal(results[0].messages[0].ruleId, 'no-program/no-program');
                         assert.equal(results[0].messages[0].message, 'Program is disallowed.');
+                    },
+                );
+
+                // https://github.com/eslint/eslint/issues/18575
+                describe
+                (
+                    'on Windows',
+                    () =>
+                    {
+                        if (platform() !== 'win32') return;
+
+                        let otherDriveLetter;
+                        const execAsync = promisify(exec);
+
+                        /*
+                         * Map the fixture directory to a new virtual drive.
+                         * Use the first drive letter available.
+                         */
+                        before
+                        (
+                            async () =>
+                            {
+                                const substDir = getFixturePath();
+                                for (const driveLetter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+                                {
+                                    try
+                                    {
+                                        // More info on this command at
+                                        // https://en.wikipedia.org/wiki/SUBST
+                                        await execAsync(`subst ${driveLetter}: "${substDir}"`);
+                                    }
+                                    catch
+                                    {
+                                        continue;
+                                    }
+                                    otherDriveLetter = driveLetter;
+                                    break;
+                                }
+                                if (!otherDriveLetter)
+                                    throw Error('Unable to assign a virtual drive letter.');
+                            },
+                        );
+
+                        /*
+                         * Delete the virtual drive.
+                         */
+                        after
+                        (
+                            async () =>
+                            {
+                                if (otherDriveLetter)
+                                {
+                                    try
+                                    {
+                                        await execAsync(`subst /D ${otherDriveLetter}:`);
+                                    }
+                                    catch ({ message })
+                                    {
+                                        throw Error
+                                        (
+                                            `Unable to unassign virtual drive letter ${
+                                            otherDriveLetter}: - ${message}`,
+                                        );
+                                    }
+                                }
+                            },
+                        );
+
+                        it
+                        (
+                            'should return a warning when an explicitly given file is on a ' +
+                            'different drive',
+                            async () =>
+                            {
+                                eslint =
+                                await ESLint.fromCLIOptions
+                                (
+                                    {
+                                        flag,
+                                        cwd: getFixturePath(),
+                                    },
+                                );
+                                const filePath = `${otherDriveLetter}:\\passing.js`;
+                                const results = await eslint.lintParallel([filePath]);
+
+                                assert.equal(results.length, 1);
+                                assert.equal(results[0].filePath, filePath);
+                                assert.equal(results[0].messages[0].severity, 1);
+                                assert.equal
+                                (
+                                    results[0].messages[0].message,
+                                    'File ignored because outside of base path.',
+                                );
+                                assert.equal(results[0].errorCount, 0);
+                                assert.equal(results[0].warningCount, 1);
+                                assert.equal(results[0].fatalErrorCount, 0);
+                                assert.equal(results[0].fixableErrorCount, 0);
+                                assert.equal(results[0].fixableWarningCount, 0);
+                                assert.equal(results[0].suppressedMessages.length, 0);
+                            },
+                        );
+
+                        it
+                        (
+                            'should not ignore an explicitly given file that is on the same ' +
+                            'drive as cwd',
+                            async () =>
+                            {
+                                eslint =
+                                await ESLint.fromCLIOptions
+                                (
+                                    {
+                                        flag,
+                                        cwd: `${otherDriveLetter}:\\`,
+                                    },
+                                );
+                                const filePath = `${otherDriveLetter}:\\passing.js`;
+                                const results = await eslint.lintParallel([filePath]);
+
+                                assert.equal(results.length, 1);
+                                assert.equal(results[0].filePath, filePath);
+                                assert.equal(results[0].messages.length, 0);
+                                assert.equal(results[0].errorCount, 0);
+                                assert.equal(results[0].warningCount, 0);
+                                assert.equal(results[0].fatalErrorCount, 0);
+                                assert.equal(results[0].fixableErrorCount, 0);
+                                assert.equal(results[0].fixableWarningCount, 0);
+                                assert.equal(results[0].suppressedMessages.length, 0);
+                            },
+                        );
+
+                        it
+                        (
+                            'should not ignore a file on the same drive as cwd that matches a ' +
+                            'glob pattern',
+                            async () =>
+                            {
+                                eslint =
+                                await ESLint.fromCLIOptions
+                                (
+                                    {
+                                        flag,
+                                        cwd: `${otherDriveLetter}:\\`,
+                                    },
+                                );
+                                const pattern = `${otherDriveLetter}:\\pa*ng.*`;
+                                const results = await eslint.lintParallel([pattern]);
+
+                                assert.equal(results.length, 1);
+                                assert.equal
+                                (results[0].filePath, `${otherDriveLetter}:\\passing.js`);
+                                assert.equal(results[0].messages.length, 0);
+                                assert.equal(results[0].errorCount, 0);
+                                assert.equal(results[0].warningCount, 0);
+                                assert.equal(results[0].fatalErrorCount, 0);
+                                assert.equal(results[0].fixableErrorCount, 0);
+                                assert.equal(results[0].fixableWarningCount, 0);
+                                assert.equal(results[0].suppressedMessages.length, 0);
+                            },
+                        );
+
+                        it
+                        (
+                            'should throw an error when a glob pattern matches only files on ' +
+                            'different drive',
+                            async () =>
+                            {
+                                eslint =
+                                await ESLint.fromCLIOptions
+                                (
+                                    {
+                                        flag,
+                                        cwd: getFixturePath(),
+                                    },
+                                );
+                                const pattern = `${otherDriveLetter}:\\pa**ng.*`;
+                                await assert.rejects
+                                (
+                                    eslint.lintParallel([pattern]),
+                                    `All files matched by '${otherDriveLetter
+                                    }:\\pa**ng.*' are ignored.`,
+                                );
+                            },
+                        );
                     },
                 );
             },

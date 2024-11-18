@@ -6,7 +6,7 @@ export default async function createGetFixerForFixTypes(importAsESLint)
 
     /* global shouldMessageBeFixed -- make-grab lib/eslint/eslint.js */
 
-    /* global getFixerForFixTypes -- make-grab lib/eslint/eslint.js */
+    /* global getFixerForFixTypes -- make-grab */
 
     return getFixerForFixTypes;
 }
