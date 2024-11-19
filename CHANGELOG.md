@@ -1,3 +1,9 @@
+<a name="v0.14.0"></a>
+## [v0.14.0](https://github.com/origin-1/eslint-p/releases/tag/v0.14.0) (2024-11-19)
+
+This release updates the used ESLint version to [v9.15.0](https://eslint.org/blog/2024/11/eslint-v9.15.0-released/).
+The [README file](https://github.com/origin-1/eslint-p/blob/main/README.md) has been expanded with installation instructions, notes about using eslint-p alongside ESLInt, and more.
+
 <a name="v0.13.0"></a>
 ## [v0.13.0](https://github.com/origin-1/eslint-p/releases/tag/v0.13.0) (2024-11-02)
 
