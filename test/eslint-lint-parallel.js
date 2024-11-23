@@ -132,7 +132,7 @@ function useFixtures()
     }
 )
 (
-    'lintParallel()',
+    'lintFiles()',
     flag =>
     {
         let eslint;
@@ -156,7 +156,7 @@ function useFixtures()
                         parser: fileURLToPath(parserURL),
                     },
                 );
-                const results = await eslint.lintParallel([fileURLToPath(import.meta.url)]);
+                const results = await eslint.lintFiles([fileURLToPath(import.meta.url)]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 1);
@@ -180,7 +180,7 @@ function useFixtures()
                     },
                 );
                 const results =
-                await eslint.lintParallel(['test/fixtures/simple-valid-project/**/foo*.js']);
+                await eslint.lintFiles(['test/fixtures/simple-valid-project/**/foo*.js']);
 
                 assert.equal(results.length, 2);
                 assert.equal(results[0].messages.length, 0);
@@ -203,7 +203,7 @@ function useFixtures()
                         config: 'test/fixtures/simple-valid-project/eslint.config.js',
                     },
                 );
-                const results = await eslint.lintParallel
+                const results = await eslint.lintFiles
                 (
                     [
                         'test/fixtures/simple-valid-project/**/foo*.js',
@@ -234,7 +234,7 @@ function useFixtures()
                         parser:         'espree',
                     },
                 );
-                const results = await eslint.lintParallel(['lib/eslint-p.js']);
+                const results = await eslint.lintFiles(['lib/eslint-p.js']);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0);
@@ -257,7 +257,7 @@ function useFixtures()
                         ignore: false,
                     },
                 );
-                const results = await eslint.lintParallel(['test/fixtures/passing.js']);
+                const results = await eslint.lintFiles(['test/fixtures/passing.js']);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0);
@@ -304,7 +304,7 @@ function useFixtures()
                             },
                         );
                         await assert.rejects
-                        (eslint.lintParallel('no-config-file/*.js'), /Could not find config file/u);
+                        (eslint.lintFiles('no-config-file/*.js'), /Could not find config file/u);
                     },
                 );
 
@@ -326,7 +326,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel('no-config/no-config-file/*.js'),
+                            eslint.lintFiles('no-config/no-config-file/*.js'),
                             /Could not find config file/u,
                         );
                     },
@@ -350,7 +350,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel('no-config/no-config-file/foo.js'),
+                            eslint.lintFiles('no-config/no-config-file/foo.js'),
                             /Could not find config file/u,
                         );
                     },
@@ -370,7 +370,7 @@ function useFixtures()
                                 cwd: workDir,
                             },
                         );
-                        await eslint.lintParallel('no-config-file/*.js');
+                        await eslint.lintFiles('no-config-file/*.js');
                     },
                 );
 
@@ -389,7 +389,7 @@ function useFixtures()
                                 config: join(fixtureDir, 'configurations/quotes-error.js'),
                             },
                         );
-                        await eslint.lintParallel('no-config-file/*.js');
+                        await eslint.lintFiles('no-config-file/*.js');
                     },
                 );
             },
@@ -409,7 +409,7 @@ function useFixtures()
                         config: 'does-not-exist.js',
                     },
                 );
-                await assert.rejects(eslint.lintParallel('undef*.js'), { code: 'ENOENT' });
+                await assert.rejects(eslint.lintFiles('undef*.js'), { code: 'ENOENT' });
             },
         );
 
@@ -428,7 +428,7 @@ function useFixtures()
                 );
                 await assert.rejects
                 (
-                    eslint.lintParallel(['lib/eslint-p.js']),
+                    eslint.lintFiles(['lib/eslint-p.js']),
                     /Expected object with parse\(\) or parseForESLint\(\) method/u,
                 );
             },
@@ -455,7 +455,7 @@ function useFixtures()
                             },
                         );
                         const results =
-                        await eslint.lintParallel
+                        await eslint.lintFiles
                         (['files/foo.js', 'files/../files/foo.js', 'files/foo.js']);
 
                         assert.equal(results.length, 1);
@@ -480,7 +480,7 @@ function useFixtures()
                                 cwd,
                             },
                         );
-                        const results = await eslint.lintParallel(['files/foo.js', 'files/foo*']);
+                        const results = await eslint.lintFiles(['files/foo.js', 'files/foo*']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].filePath, join(cwd, 'files/foo.js'));
@@ -504,7 +504,7 @@ function useFixtures()
                                 cwd,
                             },
                         );
-                        const results = await eslint.lintParallel(['files/f*.js', 'files/foo*']);
+                        const results = await eslint.lintFiles(['files/f*.js', 'files/foo*']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].filePath, join(cwd, 'files/foo.js'));
@@ -538,7 +538,7 @@ function useFixtures()
                                 eslint = await ESLint.fromCLIOptions({ flag });
                                 await assert.rejects
                                 (
-                                    eslint.lintParallel(value),
+                                    eslint.lintFiles(value),
                                     {
                                         message:
                                         '\'patterns\' must be a non-empty string or an array of ' +
@@ -580,7 +580,7 @@ function useFixtures()
                                         config:         getFixturePath('eslint.config.js'),
                                     },
                                 );
-                                const results = await eslint.lintParallel(value);
+                                const results = await eslint.lintFiles(value);
 
                                 assert.equal(results.length, 2);
                                 assert.equal(results[0].filePath, getFixturePath('files/.bar.js'));
@@ -609,7 +609,7 @@ function useFixtures()
                                         passOnNoPatterns:   true,
                                     },
                                 );
-                                const results = await eslint.lintParallel(value);
+                                const results = await eslint.lintFiles(value);
 
                                 assert.equal(results.length, 0);
                             },
@@ -634,7 +634,7 @@ function useFixtures()
                         overrideConfig: { files: ['**/*.js2'] },
                     },
                 );
-                const results = await eslint.lintParallel([getFixturePath('files/foo.js2')]);
+                const results = await eslint.lintFiles([getFixturePath('files/foo.js2')]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0);
@@ -658,7 +658,7 @@ function useFixtures()
                         config:         getFixturePath('eslint.config.js'),
                     },
                 );
-                const results = await eslint.lintParallel(['fixtures/files/']);
+                const results = await eslint.lintFiles(['fixtures/files/']);
 
                 assert.equal(results.length, 3);
                 assert.equal(results[0].messages.length, 0);
@@ -684,7 +684,7 @@ function useFixtures()
                         overrideConfig: { files: ['*'] },
                     },
                 );
-                const results = await eslint.lintParallel(['.']);
+                const results = await eslint.lintFiles(['.']);
 
                 assert.equal(results.length, 2);
                 assert
@@ -712,7 +712,7 @@ function useFixtures()
                         configLookup:   true,
                     },
                 );
-                const results = await eslint.lintParallel(['../*.js']);
+                const results = await eslint.lintFiles(['../*.js']);
 
                 assert.equal(results.length, 2);
                 assert.equal(results[0].messages.length, 0);
@@ -738,7 +738,7 @@ function useFixtures()
                         cwd,
                     },
                 );
-                const results = await eslint.lintParallel(['.']);
+                const results = await eslint.lintFiles(['.']);
 
                 assert.equal(results.length, 2);
                 assert.equal(results[0].messages.length, 0);
@@ -763,7 +763,7 @@ function useFixtures()
                         cwd,
                     },
                 );
-                const results = await eslint.lintParallel(['subdir1']);
+                const results = await eslint.lintFiles(['subdir1']);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0);
@@ -788,7 +788,7 @@ function useFixtures()
                         configLookup: true,
                     },
                 );
-                const results = await eslint.lintParallel(['src/**/*.{js,json}']);
+                const results = await eslint.lintFiles(['src/**/*.{js,json}']);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 1);
@@ -813,7 +813,7 @@ function useFixtures()
                         configLookup: true,
                     },
                 );
-                const results = await eslint.lintParallel(['a*.js']);
+                const results = await eslint.lintFiles(['a*.js']);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].filePath, getFixturePath('promise-config', 'a.js'));
@@ -844,7 +844,7 @@ function useFixtures()
                                 configLookup: true,
                             },
                         );
-                        const results = await eslint.lintParallel(['.']);
+                        const results = await eslint.lintFiles(['.']);
 
                         assert.equal(results.length, 3);
                         assert.equal(results[0].messages.length, 0);
@@ -874,7 +874,7 @@ function useFixtures()
                                 configLookup: true,
                             },
                         );
-                        const results = await eslint.lintParallel(['*.js']);
+                        const results = await eslint.lintFiles(['*.js']);
 
                         assert.equal(results.length, 3);
                         assert.equal(results[0].messages.length, 0);
@@ -903,7 +903,7 @@ function useFixtures()
                                 cwd,
                             },
                         );
-                        const results = await eslint.lintParallel(['.a.js']);
+                        const results = await eslint.lintFiles(['.a.js']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 0);
@@ -938,7 +938,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir1', 'doesnotexist/*.js']),
+                            eslint.lintFiles(['subdir1', 'doesnotexist/*.js']),
                             /No files matching 'doesnotexist\/\*\.js' were found/u,
                         );
                     },
@@ -962,7 +962,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']),
+                            eslint.lintFiles(['subdir1/*.js', 'subdir2/*.js']),
                             /All files matched by 'subdir2\/\*\.js' are ignored/u,
                         );
                     },
@@ -986,7 +986,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']),
+                            eslint.lintFiles(['subdir1/*.js', 'subdir2/*.js']),
                             /All files matched by 'subdir2\/\*\.js' are ignored/u,
                         );
                     },
@@ -1009,22 +1009,22 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['doesnotexist1/*.js', 'doesnotexist2/*.js']),
+                            eslint.lintFiles(['doesnotexist1/*.js', 'doesnotexist2/*.js']),
                             /No files matching 'doesnotexist1\/\*\.js' were found/u,
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['doesnotexist1/*.js', 'subdir1/*.js']),
+                            eslint.lintFiles(['doesnotexist1/*.js', 'subdir1/*.js']),
                             /No files matching 'doesnotexist1\/\*\.js' were found/u,
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir1/*.js', 'doesnotexist1/*.js']),
+                            eslint.lintFiles(['subdir1/*.js', 'doesnotexist1/*.js']),
                             /All files matched by 'subdir1\/\*\.js' are ignored/u,
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir1/*.js', 'subdir2/*.js']),
+                            eslint.lintFiles(['subdir1/*.js', 'subdir2/*.js']),
                             /All files matched by 'subdir1\/\*\.js' are ignored/u,
                         );
                     },
@@ -1047,7 +1047,7 @@ function useFixtures()
                                 ignorePattern:              ['subdir2/*.js'],
                             },
                         );
-                        const results = await eslint.lintParallel(['subdir2/*.js']);
+                        const results = await eslint.lintFiles(['subdir2/*.js']);
 
                         assert.equal(results.length, 0);
                     },
@@ -1069,7 +1069,7 @@ function useFixtures()
                                 errorOnUnmatchedPattern: false,
                             },
                         );
-                        const results = await eslint.lintParallel(['doesexist/*.js']);
+                        const results = await eslint.lintFiles(['doesexist/*.js']);
 
                         assert.equal(results.length, 0);
                     },
@@ -1100,7 +1100,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['target-dir']);
+                        const results = await eslint.lintFiles(['target-dir']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 0);
@@ -1128,7 +1128,7 @@ function useFixtures()
                                 cwd:    getFixturePath('shallow-glob'),
                             },
                         );
-                        const results = await eslint.lintParallel(['subdir/subsubdir']);
+                        const results = await eslint.lintFiles(['subdir/subsubdir']);
 
                         assert.equal(results.length, 2);
                         assert.equal(results[0].messages.length, 1);
@@ -1169,7 +1169,7 @@ function useFixtures()
                                 cwd:    getFixturePath('shallow-glob'),
                             },
                         );
-                        const results = await eslint.lintParallel(['subdir']);
+                        const results = await eslint.lintFiles(['subdir']);
 
                         assert.equal(results.length, 3);
                         assert.equal(results[0].messages.length, 1);
@@ -1201,7 +1201,7 @@ function useFixtures()
                         config:         getFixturePath('eslint.config.js'),
                     },
                 );
-                const results = await eslint.lintParallel(['fixtures/files/*']);
+                const results = await eslint.lintFiles(['fixtures/files/*']);
 
                 assert.equal(results.length, 3);
                 assert.equal(results[0].messages.length, 0);
@@ -1229,7 +1229,7 @@ function useFixtures()
                         config:         getFixturePath('eslint.config.js'),
                     },
                 );
-                const results = await eslint.lintParallel(['fixtures/files/*']);
+                const results = await eslint.lintFiles(['fixtures/files/*']);
 
                 assert.equal(results.length, 3);
                 assert.equal(results[0].messages.length, 0);
@@ -1260,7 +1260,7 @@ function useFixtures()
                             config:         getFixturePath('eslint.config.js'),
                         },
                     );
-                    const results = await eslint.lintParallel(['fixtures\\files\\*']);
+                    const results = await eslint.lintFiles(['fixtures\\files\\*']);
 
                     assert.equal(results.length, 3);
                     assert.equal(results[0].messages.length, 0);
@@ -1291,7 +1291,7 @@ function useFixtures()
                 );
                 await assert.rejects
                 (
-                    eslint.lintParallel(['fixtures/files/*']),
+                    eslint.lintFiles(['fixtures/files/*']),
                     /No files matching 'fixtures\/files\/\*' were found \(glob was disabled\)\./u,
                 );
             },
@@ -1317,7 +1317,7 @@ function useFixtures()
                                 cwd,
                             },
                         );
-                        const results = await eslint.lintParallel(['node_modules/foo.js']);
+                        const results = await eslint.lintFiles(['node_modules/foo.js']);
                         const expectedMsg =
                         'File ignored by default because it is located under the node_modules ' +
                         'directory. Use ignore pattern "!**/node_modules/" to disable file ' +
@@ -1351,8 +1351,7 @@ function useFixtures()
                             },
                         );
                         const results =
-                        await eslint.lintParallel
-                        (['nested_node_modules/subdir/node_modules/text.js']);
+                        await eslint.lintFiles(['nested_node_modules/subdir/node_modules/text.js']);
                         const expectedMsg =
                         'File ignored by default because it is located under the node_modules ' +
                         'directory. Use ignore pattern "!**/node_modules/" to disable file ' +
@@ -1385,7 +1384,7 @@ function useFixtures()
                                 ignorePattern: ['*.js'],
                             },
                         );
-                        const results = await eslint.lintParallel(['node_modules_cleaner.js']);
+                        const results = await eslint.lintFiles(['node_modules_cleaner.js']);
                         const expectedMsg =
                         'File ignored because of a matching ignore pattern. Use "--no-ignore" to ' +
                         'disable file ignore settings or use "--no-warn-ignored" to suppress ' +
@@ -1419,7 +1418,7 @@ function useFixtures()
                                 warnIgnored: false,
                             },
                         );
-                        const results = await eslint.lintParallel(['node_modules/foo.js']);
+                        const results = await eslint.lintFiles(['node_modules/foo.js']);
 
                         assert.equal(results.length, 0);
                     },
@@ -1440,7 +1439,7 @@ function useFixtures()
                                 rule: { quotes: [2, 'single'] },
                             },
                         );
-                        const results = await eslint.lintParallel(['hidden/.hiddenfolder/*.js']);
+                        const results = await eslint.lintFiles(['hidden/.hiddenfolder/*.js']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].errorCount, 1);
@@ -1466,7 +1465,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['node_modules']),
+                            eslint.lintFiles(['node_modules']),
                             /All files matched by 'node_modules' are ignored\./u,
                         );
                     },
@@ -1490,7 +1489,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['node_modules']),
+                            eslint.lintFiles(['node_modules']),
                             /All files matched by 'node_modules' are ignored\./u,
                         );
                     },
@@ -1511,7 +1510,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['test/fixtures/cli-engine/']),
+                            eslint.lintFiles(['test/fixtures/cli-engine/']),
                             /All files matched by 'test\/fixtures\/cli-engine\/' are ignored\./u,
                         );
                     },
@@ -1534,7 +1533,7 @@ function useFixtures()
                         const expectedRegExp =
                         /All files matched by '\.\/test\/fixtures\/cli-engine\/' are ignored\./u;
                         await assert.rejects
-                        (eslint.lintParallel(['./test/fixtures/cli-engine/']), expectedRegExp);
+                        (eslint.lintFiles(['./test/fixtures/cli-engine/']), expectedRegExp);
                     },
                 );
 
@@ -1553,7 +1552,7 @@ function useFixtures()
                                 cwd:    getFixturePath('cli-engine', 'nested_node_modules'),
                             },
                         );
-                        const results = await eslint.lintParallel(['.']);
+                        const results = await eslint.lintFiles(['.']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].errorCount, 0);
@@ -1584,7 +1583,7 @@ function useFixtures()
                         const expectedRegExp =
                         /All files matched by '\.\/test\/fixtures\/cli-engine\/' are ignored\./u;
                         await assert.rejects
-                        (eslint.lintParallel(['./test/fixtures/cli-engine/']), expectedRegExp);
+                        (eslint.lintFiles(['./test/fixtures/cli-engine/']), expectedRegExp);
                     },
                 );
 
@@ -1603,7 +1602,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['test/fixtures/*-quoted.js']),
+                            eslint.lintFiles(['test/fixtures/*-quoted.js']),
                             /All files matched by 'test\/fixtures\/\*-quoted\.js' are ignored\./u,
                         );
                     },
@@ -1623,7 +1622,7 @@ function useFixtures()
                             },
                         );
                         await assert.doesNotReject
-                        (async () => { await eslint.lintParallel(['*.js']); });
+                        (async () => { await eslint.lintFiles(['*.js']); });
                     },
                 );
 
@@ -1642,7 +1641,7 @@ function useFixtures()
                             },
                         );
                         const filePath = getFixturePath('passing.js');
-                        const results = await eslint.lintParallel([filePath]);
+                        const results = await eslint.lintFiles([filePath]);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].filePath, filePath);
@@ -1678,7 +1677,7 @@ function useFixtures()
                             },
                         );
                         const filePath = getFixturePath('files', 'foo.js2');
-                        const results = await eslint.lintParallel([filePath]);
+                        const results = await eslint.lintFiles([filePath]);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].filePath, filePath);
@@ -1713,7 +1712,7 @@ function useFixtures()
                             },
                         );
                         const filePath = getFixturePath('passing.js');
-                        const results = await eslint.lintParallel([filePath]);
+                        const results = await eslint.lintFiles([filePath]);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].filePath, filePath);
@@ -1749,7 +1748,7 @@ function useFixtures()
                             },
                         );
                         const filePath = getFixturePath('passing.js');
-                        const results = await eslint.lintParallel([filePath]);
+                        const results = await eslint.lintFiles([filePath]);
 
                         assert.equal(results.length, 0);
                     },
@@ -1771,7 +1770,7 @@ function useFixtures()
                             },
                         );
                         const filePath = getFixturePath('dot-files/.a.js');
-                        const results = await eslint.lintParallel([filePath]);
+                        const results = await eslint.lintFiles([filePath]);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].filePath, filePath);
@@ -1810,7 +1809,7 @@ function useFixtures()
                             },
                         );
                         const filePath = getFixturePath('undef.js');
-                        const results = await eslint.lintParallel([filePath]);
+                        const results = await eslint.lintFiles([filePath]);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].filePath, filePath);
@@ -1837,7 +1836,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['**/*.js']);
+                        const results = await eslint.lintFiles(['**/*.js']);
 
                         assert.equal(results.length, 1);
                         assert.equal
@@ -1862,15 +1861,15 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir/**']),
+                            eslint.lintFiles(['subdir/**']),
                             /All files matched by 'subdir\/\*\*' are ignored\./u,
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir/subsubdir/**']),
+                            eslint.lintFiles(['subdir/subsubdir/**']),
                             /All files matched by 'subdir\/subsubdir\/\*\*' are ignored\./u,
                         );
-                        const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
+                        const results = await eslint.lintFiles(['subdir/subsubdir/a.js']);
                         assert.equal(results.length, 1);
                         assert.equal
                         (
@@ -1903,10 +1902,10 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subdir/**/*.js']),
+                            eslint.lintFiles(['subdir/**/*.js']),
                             /All files matched by 'subdir\/\*\*\/\*\.js' are ignored\./u,
                         );
-                        const results = await eslint.lintParallel(['subdir/subsubdir/a.js']);
+                        const results = await eslint.lintFiles(['subdir/subsubdir/a.js']);
                         assert.equal(results.length, 1);
                         assert.equal
                         (
@@ -1931,7 +1930,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['subsubdir/**/*.js']),
+                            eslint.lintFiles(['subsubdir/**/*.js']),
                             /All files matched by 'subsubdir\/\*\*\/\*\.js' are ignored\./u,
                         );
                     },
@@ -1952,7 +1951,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['*.js']);
+                        const results = await eslint.lintFiles(['*.js']);
 
                         assert.equal(results.length, 1);
                         assert.equal
@@ -1982,7 +1981,7 @@ function useFixtures()
                                 ],
                             },
                         );
-                        const results = await eslint.lintParallel(['a.js']);
+                        const results = await eslint.lintFiles(['a.js']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].errorCount, 0);
@@ -2010,7 +2009,7 @@ function useFixtures()
                                 ],
                             },
                         );
-                        const results = await eslint.lintParallel(['subdir/**/*.js']);
+                        const results = await eslint.lintFiles(['subdir/**/*.js']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].errorCount, 0);
@@ -2047,7 +2046,7 @@ function useFixtures()
                                 ],
                             },
                         );
-                        const results = await eslint.lintParallel(['.']);
+                        const results = await eslint.lintFiles(['.']);
 
                         assert.equal(results.length, 2);
                         assert.equal(results[0].errorCount, 0);
@@ -2082,7 +2081,7 @@ function useFixtures()
                                 ignorePattern:  ['tests/format/*/'],
                             },
                         );
-                        const results = await eslint.lintParallel(['.']);
+                        const results = await eslint.lintFiles(['.']);
 
                         assert.equal(results.length, 2);
                         assert.equal(results[0].errorCount, 0);
@@ -2121,7 +2120,7 @@ function useFixtures()
                                 ],
                             },
                         );
-                        const results = await eslint.lintParallel(['.']);
+                        const results = await eslint.lintFiles(['.']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].errorCount, 0);
@@ -2155,7 +2154,7 @@ function useFixtures()
                             },
                         );
                         await assert.rejects
-                        (eslint.lintParallel(['.']), /All files matched by '.' are ignored/u);
+                        (eslint.lintFiles(['.']), /All files matched by '.' are ignored/u);
                     },
                 );
 
@@ -2185,7 +2184,7 @@ function useFixtures()
                             },
                         );
                         await assert.rejects
-                        (eslint.lintParallel(['.']), /All files matched by '.' are ignored/u);
+                        (eslint.lintFiles(['.']), /All files matched by '.' are ignored/u);
                     },
                 );
 
@@ -2206,7 +2205,7 @@ function useFixtures()
                                 rule:           { 'no-undef': 'warn' },
                             },
                         );
-                        const results = await eslint.lintParallel(['curly-files']);
+                        const results = await eslint.lintFiles(['curly-files']);
 
                         assert.equal(results.length, 2);
                         assert.equal(results[0].filePath, getFixturePath('curly-files', 'a.js'));
@@ -2242,7 +2241,7 @@ function useFixtures()
                                 rule:                       { 'no-program/no-program': 'warn' },
                             },
                         );
-                        const results = await eslint.lintParallel(['**/a.js']);
+                        const results = await eslint.lintFiles(['**/a.js']);
 
                         assert.equal(results.length, 2);
                         assert.equal
@@ -2278,7 +2277,7 @@ function useFixtures()
                                 rule:                       { 'no-program/no-program': 'warn' },
                             },
                         );
-                        const results = await eslint.lintParallel(['**/a.js']);
+                        const results = await eslint.lintFiles(['**/a.js']);
 
                         assert.equal(results.length, 1);
                         assert.equal
@@ -2370,7 +2369,7 @@ function useFixtures()
                                     },
                                 );
                                 const filePath = `${otherDriveLetter}:\\passing.js`;
-                                const results = await eslint.lintParallel([filePath]);
+                                const results = await eslint.lintFiles([filePath]);
 
                                 assert.equal(results.length, 1);
                                 assert.equal(results[0].filePath, filePath);
@@ -2404,7 +2403,7 @@ function useFixtures()
                                     },
                                 );
                                 const filePath = `${otherDriveLetter}:\\passing.js`;
-                                const results = await eslint.lintParallel([filePath]);
+                                const results = await eslint.lintFiles([filePath]);
 
                                 assert.equal(results.length, 1);
                                 assert.equal(results[0].filePath, filePath);
@@ -2433,7 +2432,7 @@ function useFixtures()
                                     },
                                 );
                                 const pattern = `${otherDriveLetter}:\\pa*ng.*`;
-                                const results = await eslint.lintParallel([pattern]);
+                                const results = await eslint.lintFiles([pattern]);
 
                                 assert.equal(results.length, 1);
                                 assert.equal
@@ -2465,7 +2464,7 @@ function useFixtures()
                                 const pattern = `${otherDriveLetter}:\\pa**ng.*`;
                                 await assert.rejects
                                 (
-                                    eslint.lintParallel([pattern]),
+                                    eslint.lintFiles([pattern]),
                                     `All files matched by '${otherDriveLetter
                                     }:\\pa**ng.*' are ignored.`,
                                 );
@@ -2491,7 +2490,7 @@ function useFixtures()
                         cwd:            join(fixtureDir, '..'),
                     },
                 );
-                const results = await eslint.lintParallel(['fixtures/files/*.?s*']);
+                const results = await eslint.lintFiles(['fixtures/files/*.?s*']);
 
                 assert.equal(results.length, 3);
                 assert.equal(results[0].messages.length, 0);
@@ -2519,7 +2518,7 @@ function useFixtures()
                         ignore: false,
                     },
                 );
-                const results = await eslint.lintParallel([getFixturePath('single-quoted.js')]);
+                const results = await eslint.lintFiles([getFixturePath('single-quoted.js')]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 1);
@@ -2554,7 +2553,7 @@ function useFixtures()
                 );
 
                 const formattersDir = getFixturePath('formatters');
-                const results = await eslint.lintParallel([formattersDir]);
+                const results = await eslint.lintFiles([formattersDir]);
 
                 assert.equal(results.length, 5);
                 assert.equal(relative(formattersDir, results[0].filePath), 'async.js');
@@ -2615,7 +2614,7 @@ function useFixtures()
                         config: getFixturePath('configurations', 'env-browser.js'),
                     },
                 );
-                const results = await eslint.lintParallel([getFixturePath('globals-browser.js')]);
+                const results = await eslint.lintFiles([getFixturePath('globals-browser.js')]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0, 'Should have no messages.');
@@ -2642,7 +2641,7 @@ function useFixtures()
                         },
                     },
                 );
-                const results = await eslint.lintParallel([getFixturePath('globals-browser.js')]);
+                const results = await eslint.lintFiles([getFixturePath('globals-browser.js')]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0);
@@ -2665,7 +2664,7 @@ function useFixtures()
                         config: getFixturePath('configurations', 'env-node.js'),
                     },
                 );
-                const results = await eslint.lintParallel([getFixturePath('globals-node.js')]);
+                const results = await eslint.lintFiles([getFixturePath('globals-node.js')]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0, 'Should have no messages.');
@@ -2691,7 +2690,7 @@ function useFixtures()
                 );
                 const failFilePath = getFixturePath('missing-semicolon.js');
                 const passFilePath = getFixturePath('passing.js');
-                let results = await eslint.lintParallel([failFilePath]);
+                let results = await eslint.lintFiles([failFilePath]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].filePath, failFilePath);
@@ -2700,7 +2699,7 @@ function useFixtures()
                 assert.equal(results[0].suppressedMessages.length, 0);
                 assert.equal(results[0].messages[0].severity, 2);
 
-                results = await eslint.lintParallel([passFilePath]);
+                results = await eslint.lintFiles([passFilePath]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].filePath, passFilePath);
@@ -2724,7 +2723,7 @@ function useFixtures()
                         config: getFixturePath('eslint.config.js'),
                     },
                 );
-                const results = await eslint.lintParallel([getFixturePath('shebang.js')]);
+                const results = await eslint.lintFiles([getFixturePath('shebang.js')]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].messages.length, 0, 'Should have lint messages.');
@@ -2747,7 +2746,7 @@ function useFixtures()
                     },
                 );
                 const filePath = getFixturePath('missing-semicolon.js');
-                const results = await eslint.lintParallel([filePath]);
+                const results = await eslint.lintFiles([filePath]);
 
                 assert.equal(results.length, 1);
                 assert.equal(results[0].filePath, filePath);
@@ -2780,7 +2779,7 @@ function useFixtures()
                                 },
                             },
                         );
-                        const results = await eslint.lintParallel(['lib/eslint-*.js']);
+                        const results = await eslint.lintFiles(['lib/eslint-*.js']);
 
                         assert.deepEqual
                         (
@@ -2811,7 +2810,7 @@ function useFixtures()
                                 },
                             },
                         );
-                        const results = await eslint.lintParallel(['lib/eslint-*.js']);
+                        const results = await eslint.lintFiles(['lib/eslint-*.js']);
 
                         assert.deepEqual(results[0].usedDeprecatedRules, []);
                     },
@@ -2832,7 +2831,7 @@ function useFixtures()
                                 'test/fixtures/cli-engine/deprecated-rule-config/eslint.config.js',
                             },
                         );
-                        const results = await eslint.lintParallel(['lib/eslint-*.js']);
+                        const results = await eslint.lintFiles(['lib/eslint-*.js']);
 
                         assert.deepEqual
                         (
@@ -2867,7 +2866,7 @@ function useFixtures()
                         const inputPath = getFixturePath('autofix/semicolon-conflicting-fixes.js');
                         const outputPath =
                         getFixturePath('autofix/semicolon-conflicting-fixes.expected.js');
-                        const results = await eslint.lintParallel([inputPath]);
+                        const results = await eslint.lintFiles([inputPath]);
                         const expectedOutput = await readFile(outputPath, 'utf8');
 
                         assert.equal(results[0].output, expectedOutput);
@@ -2891,7 +2890,7 @@ function useFixtures()
                         const inputPath = getFixturePath('autofix/return-conflicting-fixes.js');
                         const outputPath =
                         getFixturePath('autofix/return-conflicting-fixes.expected.js');
-                        const results = await eslint.lintParallel([inputPath]);
+                        const results = await eslint.lintFiles([inputPath]);
                         const expectedOutput = await readFile(outputPath, 'utf8');
 
                         assert.equal(results[0].output, expectedOutput);
@@ -2932,7 +2931,7 @@ function useFixtures()
                                 },
                             },
                         );
-                        const results = await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
+                        const results = await eslint.lintFiles([join(fixtureDir, 'fixmode')]);
                         results.forEach(convertCRLF);
 
                         assert.deepEqual
@@ -3099,11 +3098,10 @@ function useFixtures()
                         eslint =
                         await ESLint.fromCLIOptions({ ...baseOptions, cache: true, fix: false });
                         // Do initial lint run and populate the cache file
-                        await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
+                        await eslint.lintFiles([join(fixtureDir, 'fixmode')]);
                         eslint =
                         await ESLint.fromCLIOptions({ ...baseOptions, cache: true, fix: true });
-                        const results =
-                        await eslint.lintParallel([join(fixtureDir, 'fixmode')]);
+                        const results = await eslint.lintFiles([join(fixtureDir, 'fixmode')]);
 
                         assert(results.some(result => result.output));
                     },
@@ -3132,7 +3130,7 @@ function useFixtures()
                             },
                         );
                         const results =
-                        await eslint.lintParallel
+                        await eslint.lintFiles
                         ([getFixturePath('rules', 'test/test-custom-rule.js')]);
 
                         assert.equal(results.length, 1);
@@ -3158,7 +3156,7 @@ function useFixtures()
                             },
                         );
                         const results =
-                        await eslint.lintParallel
+                        await eslint.lintFiles
                         ([getFixturePath('rules', 'test', 'test-custom-rule.js')]);
 
                         assert.equal(results.length, 1);
@@ -3186,7 +3184,7 @@ function useFixtures()
                             },
                         );
                         const results =
-                        await eslint.lintParallel
+                        await eslint.lintFiles
                         ([getFixturePath('rules', 'test', 'test-custom-rule.js')]);
 
                         assert.equal(results.length, 1);
@@ -3219,7 +3217,7 @@ function useFixtures()
                             },
                         );
                         const results =
-                        await eslint.lintParallel
+                        await eslint.lintFiles
                         ([getFixturePath('processors', 'test', 'test-processor.txt')]);
 
                         assert.equal(results.length, 1);
@@ -3230,7 +3228,7 @@ function useFixtures()
 
                 it
                 (
-                    'should run processors when calling lintParallel with config file that ' +
+                    'should run processors when calling lintFiles with config file that ' +
                     'specifies preloaded processor',
                     async () =>
                     {
@@ -3244,7 +3242,7 @@ function useFixtures()
                             },
                         );
                         const results =
-                        await eslint.lintParallel
+                        await eslint.lintFiles
                         ([getFixturePath('processors', 'test', 'test-processor.txt')]);
 
                         assert.equal
@@ -3283,7 +3281,7 @@ function useFixtures()
                     {
                         await assert.rejects
                         (
-                            eslint.lintParallel(['non-exist.js']),
+                            eslint.lintFiles(['non-exist.js']),
                             /No files matching 'non-exist\.js' were found\./u,
                         );
                     },
@@ -3296,7 +3294,7 @@ function useFixtures()
                     {
                         await mkdir(getFixturePath('cli-engine/empty'), { recursive: true });
                         await assert.rejects
-                        (eslint.lintParallel(['empty']), /No files matching 'empty' were found\./u);
+                        (eslint.lintFiles(['empty']), /No files matching 'empty' were found\./u);
                     },
                 );
 
@@ -3307,7 +3305,7 @@ function useFixtures()
                     {
                         await assert.rejects
                         (
-                            eslint.lintParallel(['non-exist/**/*.js']),
+                            eslint.lintFiles(['non-exist/**/*.js']),
                             /No files matching 'non-exist\/\*\*\/\*\.js' were found\./u,
                         );
                     },
@@ -3320,7 +3318,7 @@ function useFixtures()
                     {
                         await assert.rejects
                         (
-                            eslint.lintParallel(['aaa.js', 'bbb.js']),
+                            eslint.lintFiles(['aaa.js', 'bbb.js']),
                             /No files matching 'aaa\.js' were found\./u,
                         );
                     },
@@ -3333,7 +3331,7 @@ function useFixtures()
                     {
                         await assert.rejects
                         (
-                            eslint.lintParallel(['console.js', 'non-exist.js']),
+                            eslint.lintFiles(['console.js', 'non-exist.js']),
                             /No files matching 'non-exist\.js' were found\./u,
                         );
                     },
@@ -3347,7 +3345,7 @@ function useFixtures()
                     {
                         await assert.rejects
                         (
-                            eslint.lintParallel(['*.js', 'non-exist/*.js']),
+                            eslint.lintFiles(['*.js', 'non-exist/*.js']),
                             /No files matching 'non-exist\/\*\.js' were found\./u,
                         );
                     },
@@ -3479,7 +3477,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.md']);
+                        const results = await eslint.lintFiles(['test.md']);
 
                         assert.equal(results.length, 1, 'Should have one result.');
                         assert.equal(results[0].messages.length, 1, 'Should have one message.');
@@ -3541,7 +3539,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.md']);
+                        const results = await eslint.lintFiles(['test.md']);
 
                         assert.equal(results.length, 1, 'Should have one result.');
                         assert.equal(results[0].messages.length, 2, 'Should have two messages.');
@@ -3608,7 +3606,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.md']);
+                        const results = await eslint.lintFiles(['test.md']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 0);
@@ -3693,7 +3691,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.md']);
+                        const results = await eslint.lintFiles(['test.md']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 2);
@@ -3768,7 +3766,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.md']);
+                        const results = await eslint.lintFiles(['test.md']);
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 3);
@@ -3825,7 +3823,7 @@ function useFixtures()
                         );
                         await assert.rejects
                         (
-                            eslint.lintParallel(['test.md']),
+                            eslint.lintFiles(['test.md']),
                             /Key "processor": Could not find "unknown" in plugin "markdown"/u,
                         );
                     },
@@ -3883,7 +3881,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['[ab].js']);
+                        const results = await eslint.lintFiles(['[ab].js']);
                         const filenames = results.map(r => basename(r.filePath));
 
                         assert.deepEqual(filenames, ['[ab].js']);
@@ -3920,7 +3918,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['[ab].js']);
+                        const results = await eslint.lintFiles(['[ab].js']);
                         const filenames = results.map(r => basename(r.filePath));
 
                         assert.deepEqual(filenames, ['a.js', 'b.js']);
@@ -3978,7 +3976,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 1);
@@ -4045,7 +4043,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 1);
@@ -4091,7 +4089,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 1);
@@ -4137,7 +4135,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 1);
@@ -4183,7 +4181,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 1);
@@ -4229,7 +4227,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 1);
@@ -4275,7 +4273,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 0);
@@ -4313,7 +4311,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 0);
@@ -4351,7 +4349,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['test.js']);
+                        const results = await eslint.lintFiles(['test.js']);
                         const [{ messages }] = results;
 
                         assert.equal(messages.length, 0);
@@ -4395,7 +4393,7 @@ function useFixtures()
                                         configLookup:                           true,
                                     },
                                 );
-                                const results = await eslint.lintParallel(['test.js']);
+                                const results = await eslint.lintFiles(['test.js']);
                                 const [{ messages }] = results;
 
                                 assert.equal(messages.length, 0);
@@ -4434,7 +4432,7 @@ function useFixtures()
                                         configLookup:                   true,
                                     },
                                 );
-                                const results = await eslint.lintParallel(['test.js']);
+                                const results = await eslint.lintFiles(['test.js']);
                                 const [{ messages }] = results;
 
                                 assert.equal(messages.length, 1);
@@ -4461,12 +4459,12 @@ function useFixtures()
                 eslint = await ESLint.fromCLIOptions({ flag });
                 await assert.rejects
                 (
-                    eslint.lintParallel(777),
+                    eslint.lintFiles(777),
                     /'patterns' must be a non-empty string or an array of non-empty strings/u,
                 );
                 await assert.rejects
                 (
-                    eslint.lintParallel([null]),
+                    eslint.lintFiles([null]),
                     /'patterns' must be a non-empty string or an array of non-empty strings/u,
                 );
             },
@@ -4492,7 +4490,7 @@ function useFixtures()
                                 configLookup: true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 1);
@@ -4516,7 +4514,7 @@ function useFixtures()
                                 configLookup: true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 1);
@@ -4541,7 +4539,7 @@ function useFixtures()
                                 configLookup: true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 0);
@@ -4563,7 +4561,7 @@ function useFixtures()
                                 configLookup: true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(results.length, 1);
                         assert.equal(results[0].messages.length, 1);
@@ -4603,7 +4601,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4629,7 +4627,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4655,7 +4653,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4702,7 +4700,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4749,7 +4747,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4796,7 +4794,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4852,7 +4850,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4908,7 +4906,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -4963,7 +4961,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5025,7 +5023,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5080,7 +5078,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5135,7 +5133,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5197,7 +5195,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5262,7 +5260,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5327,7 +5325,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5386,7 +5384,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5445,7 +5443,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5509,7 +5507,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5573,7 +5571,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5637,7 +5635,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5701,7 +5699,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5766,7 +5764,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5831,7 +5829,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5899,7 +5897,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5967,7 +5965,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo.js']);
+                        const results = await eslint.lintFiles(['foo.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -5993,7 +5991,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -6018,7 +6016,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -6044,7 +6042,7 @@ function useFixtures()
                                 config,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), config);
                         assert.equal(results.length, 1);
@@ -6069,7 +6067,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
                         assert.equal(results.length, 1);
@@ -6095,7 +6093,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
                         assert.equal(results.length, 1);
@@ -6121,7 +6119,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.mts'));
                         assert.equal(results.length, 1);
@@ -6146,7 +6144,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
                         assert.equal(results.length, 1);
@@ -6172,7 +6170,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
                         assert.equal(results.length, 1);
@@ -6198,7 +6196,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel('foo.js');
+                        const results = await eslint.lintFiles('foo.js');
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.cts'));
                         assert.equal(results.length, 1);
@@ -6246,7 +6244,7 @@ function useFixtures()
 
                         assert.equal
                         (await eslint.findConfigFile(), join(cwd, 'eslint.config.mcts'));
-                        await assert.rejects(eslint.lintParallel(['foo.js']));
+                        await assert.rejects(eslint.lintFiles(['foo.js']));
                     },
                 );
 
@@ -6267,7 +6265,7 @@ function useFixtures()
                         );
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        await assert.rejects(eslint.lintParallel(['foo.js']));
+                        await assert.rejects(eslint.lintFiles(['foo.js']));
                     },
                 );
 
@@ -6290,7 +6288,7 @@ function useFixtures()
 
                         assert.equal
                         (await eslint.findConfigFile(), join(cwd, '../../eslint.config.js'));
-                        await assert.doesNotReject(() => eslint.lintParallel(['foo.js']));
+                        await assert.doesNotReject(() => eslint.lintFiles(['foo.js']));
                     },
                 );
 
@@ -6309,7 +6307,7 @@ function useFixtures()
                                 configLookup:   true,
                             },
                         );
-                        const results = await eslint.lintParallel(['foo*.js']);
+                        const results = await eslint.lintFiles(['foo*.js']);
 
                         assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
                         assert.equal(results.length, 1);
@@ -6341,7 +6339,7 @@ function useFixtures()
 
                         await assert.rejects
                         (
-                            eslint.lintParallel('foo.js'),
+                            eslint.lintFiles('foo.js'),
                             {
                                 message:
                                 'The \'jiti\' library is required for loading TypeScript ' +
@@ -6373,7 +6371,7 @@ function useFixtures()
 
                         await assert.rejects
                         (
-                            eslint.lintParallel('foo.js'),
+                            eslint.lintFiles('foo.js'),
                             {
                                 message:
                                 'You are using an outdated version of the \'jiti\' library. ' +
@@ -6403,7 +6401,7 @@ function useFixtures()
 
                         await assert.rejects
                         (
-                            eslint.lintParallel('foo.js'),
+                            eslint.lintFiles('foo.js'),
                             {
                                 message:
                                 'Config (unnamed): Unexpected undefined config at user-defined ' +
@@ -6454,7 +6452,7 @@ function useFixtures()
                     );
                     await assert.rejects
                     (
-                        eslint.lintParallel('*.js'),
+                        eslint.lintFiles('*.js'),
                         ({ message }) =>
                         message.startsWith('Error while loading rule \'boom/boom\': Boom!\n'),
                     );
@@ -6502,7 +6500,7 @@ function useFixtures()
                                 overrideConfig: [{ invalid: 'foobar' }],
                             },
                         );
-                        await assert.rejects(eslint.lintParallel('*.js'));
+                        await assert.rejects(eslint.lintFiles('*.js'));
                     },
                 );
             },
@@ -6571,7 +6569,7 @@ function useFixtures()
                     },
                 );
                 const inputPath = getFixturePath('fix-types/fix-only-semi.js');
-                const results = await eslint.lintParallel([inputPath]);
+                const results = await eslint.lintFiles([inputPath]);
 
                 assert.equal(results[0].output, undefined);
             },
@@ -6599,7 +6597,7 @@ function useFixtures()
                                 },
                             );
                             const inputPath = getFixturePath('fix-types/fix-only-semi.js');
-                            results = await eslint.lintParallel([inputPath]);
+                            results = await eslint.lintFiles([inputPath]);
                         })(),
                         (async () => {
                             const outputPath =
@@ -6636,7 +6634,7 @@ function useFixtures()
                             );
                             const inputPath =
                             getFixturePath('fix-types/fix-only-prefer-arrow-callback.js');
-                            results = await eslint.lintParallel([inputPath]);
+                            results = await eslint.lintFiles([inputPath]);
                         })(),
                         (async () => {
                             const outputPath =
@@ -6674,7 +6672,7 @@ function useFixtures()
                             );
                             const inputPath =
                             getFixturePath('fix-types/fix-both-semi-and-prefer-arrow-callback.js');
-                            results = await eslint.lintParallel([inputPath]);
+                            results = await eslint.lintFiles([inputPath]);
                         })(),
                         (async () => {
                             const outputPath =
@@ -6723,7 +6721,7 @@ function useFixtures()
                         stats:  true,
                     },
                 );
-                const results = await engine.lintParallel(['file-to-fix.js']);
+                const results = await engine.lintFiles(['file-to-fix.js']);
 
                 assert.equal(results[0].stats.fixPasses, 0);
                 assert.equal(results[0].stats.times.passes.length, 1);
@@ -6752,7 +6750,7 @@ function useFixtures()
                         stats:  true,
                     },
                 );
-                const results = await engine.lintParallel(['file-to-fix.js']);
+                const results = await engine.lintFiles(['file-to-fix.js']);
 
                 assert.equal(results[0].stats.fixPasses, 2);
                 assert.equal(results[0].stats.times.passes.length, 3);
@@ -6915,7 +6913,7 @@ describe
                             },
                         );
                         const file = getFixturePath('cache/src', 'test-file.js');
-                        await eslint.lintParallel([file]);
+                        await eslint.lintFiles([file]);
 
                         assert
                         (
@@ -6957,7 +6955,7 @@ describe
                             },
                         );
                         const file = getFixturePath('cache/src', 'test-file.js');
-                        await eslint.lintParallel([file]);
+                        await eslint.lintFiles([file]);
 
                         assert
                         (
@@ -6999,7 +6997,7 @@ describe
                             },
                         );
                         const file = getFixturePath('cache/src', 'test-file.js');
-                        await eslint.lintParallel([file]);
+                        await eslint.lintFiles([file]);
 
                         assert
                         (
@@ -7037,7 +7035,7 @@ describe
                     },
                 );
                 const file = getFixturePath('cli-engine', 'console.js');
-                await eslint.lintParallel([file]);
+                await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7067,18 +7065,19 @@ describe
                     {
                         cwd,
                         // specifying cache true the cache will be created
-                        cache:  true,
+                        cache:          true,
                         rule:
                         {
                             'no-console':       0,
                             'no-unused-vars':   2,
                         },
-                        ignore: false,
+                        ignore:         false,
+                        concurrency:    1,
                     },
                 );
                 eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
                 const file = join(cwd, 'test-file.js');
-                const results = await eslint.lintParallel([file]);
+                const results = await eslint.lintFiles([file]);
 
                 assert.equal(results.length, 1);
                 const [{ errorCount, warningCount, verifyTextCallID }] = results;
@@ -7105,17 +7104,18 @@ describe
                     {
                         cwd,
                         // specifying cache true the cache will be created
-                        cache:  true,
+                        cache:          true,
                         rule:
                         {
                             'no-console':       2,
                             'no-unused-vars':   2,
                         },
-                        ignore: false,
+                        ignore:         false,
+                        concurrency:    1,
                     },
                 );
                 eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
-                const [newResult] = await eslint.lintParallel([file]);
+                const [newResult] = await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7160,18 +7160,19 @@ describe
                     {
                         cwd,
                         // specifying cache true the cache will be created
-                        cache:  true,
+                        cache:          true,
                         rule:
                         {
                             'no-console':       0,
                             'no-unused-vars':   2,
                         },
-                        ignore: false,
+                        ignore:         false,
+                        concurrency:    1,
                     },
                 );
                 eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
                 const file = getFixturePath('cache/src', 'test-file.js');
-                const results = await eslint.lintParallel([file]);
+                const results = await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7190,17 +7191,18 @@ describe
                     {
                         cwd,
                         // specifying cache true the cache will be created
-                        cache:  true,
+                        cache:          true,
                         rule:
                         {
                             'no-console':       0,
                             'no-unused-vars':   2,
                         },
-                        ignore: false,
+                        ignore:         false,
+                        concurrency:    1,
                     },
                 );
                 eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
-                const cachedResults = await eslint.lintParallel([file]);
+                const cachedResults = await eslint.lintFiles([file]);
 
                 assert.deepEqual(results, cachedResults, 'the result should have been the same');
 
@@ -7238,7 +7240,7 @@ describe
                 };
                 eslint = await ESLint.fromCLIOptions(cliOptions);
                 const file = getFixturePath('cache/src', 'test-file.js');
-                await eslint.lintParallel([file]);
+                await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7248,7 +7250,7 @@ describe
 
                 cliOptions.cache = false;
                 eslint = await ESLint.fromCLIOptions(cliOptions);
-                await eslint.lintParallel([file]);
+                await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7290,7 +7292,7 @@ describe
                 };
                 eslint = await ESLint.fromCLIOptions(cliOptions);
                 const file = getFixturePath('cache/src', 'test-file.js');
-                await eslint.lintParallel([file]);
+                await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7331,7 +7333,7 @@ describe
                 );
                 const badFile = getFixturePath('cache/src', 'fail-file.js');
                 const goodFile = getFixturePath('cache/src', 'test-file.js');
-                const result = await eslint.lintParallel([badFile, goodFile]);
+                const result = await eslint.lintFiles([badFile, goodFile]);
                 const [badFileResult, goodFileResult] = result;
 
                 assert.notEqual
@@ -7368,7 +7370,7 @@ describe
                     'the entry for the bad file should have been in the cache',
                 );
 
-                const cachedResult = await eslint.lintParallel([badFile, goodFile]);
+                const cachedResult = await eslint.lintFiles([badFile, goodFile]);
 
                 assert.deepEqual
                 (result, cachedResult, 'result should be the same with or without cache');
@@ -7406,7 +7408,7 @@ describe
                 const badFile = getFixturePath('cache/src', 'fail-file.js');
                 const goodFile = getFixturePath('cache/src', 'test-file.js');
                 const toBeDeletedFile = getFixturePath('cache/src', 'file-to-delete.js');
-                await eslint.lintParallel([badFile, goodFile, toBeDeletedFile]);
+                await eslint.lintFiles([badFile, goodFile, toBeDeletedFile]);
                 const fileCache = fCache.createFromFile(cacheFilePath);
                 let { cache } = fileCache;
 
@@ -7424,7 +7426,7 @@ describe
                  * file-entry-cache@2.0.0 will remove from the cache deleted files
                  * even when they were not part of the array of files to be analyzed
                  */
-                await eslint.lintParallel([badFile, goodFile]);
+                await eslint.lintFiles([badFile, goodFile]);
 
                 cache = JSON.parse(await readFile(cacheFilePath));
 
@@ -7483,7 +7485,7 @@ describe
                 const badFile = getFixturePath('cache/src', 'fail-file.js');
                 const goodFile = getFixturePath('cache/src', 'test-file.js');
                 const testFile2 = getFixturePath('cache/src', 'test-file2.js');
-                await eslint.lintParallel([badFile, goodFile, testFile2]);
+                await eslint.lintFiles([badFile, goodFile, testFile2]);
                 let fileCache = fCache.createFromFile(cacheFilePath);
                 let { cache } = fileCache;
 
@@ -7499,7 +7501,7 @@ describe
                  * previous version of file-entry-cache would remove the non visited
                  * entries. 2.0.0 version will keep them unless they don't exist
                  */
-                await eslint.lintParallel([badFile, goodFile]);
+                await eslint.lintFiles([badFile, goodFile]);
                 fileCache = fCache.createFromFile(cacheFilePath);
                 ({ cache } = fileCache);
 
@@ -7545,7 +7547,7 @@ describe
                 assert
                 (await fileExists(cacheFilePath), 'the cache for eslint should exist');
 
-                await eslint.lintParallel([file]);
+                await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7588,7 +7590,7 @@ describe
                 assert
                 (await fileExists(cacheFilePath), 'the cache for eslint should exist');
 
-                await eslint.lintParallel([file]);
+                await eslint.lintFiles([file]);
 
                 assert
                 (
@@ -7629,7 +7631,7 @@ describe
                 );
                 const badFile = getFixturePath('cache/src', 'fail-file.js');
                 const goodFile = getFixturePath('cache/src', 'test-file.js');
-                const result = await eslint.lintParallel([badFile, goodFile]);
+                const result = await eslint.lintFiles([badFile, goodFile]);
 
                 assert
                 (
@@ -7651,7 +7653,7 @@ describe
                     'the entry for the bad file should have been in the cache',
                 );
 
-                const cachedResult = await eslint.lintParallel([badFile, goodFile]);
+                const cachedResult = await eslint.lintFiles([badFile, goodFile]);
 
                 assert.deepEqual
                 (result, cachedResult, 'result should be the same with or without cache');
@@ -7698,7 +7700,7 @@ describe
                  */
                 for (let i = 0; i < 3; i++)
                 {
-                    const [result] = await eslint.lintParallel([filePath]);
+                    const [result] = await eslint.lintFiles([filePath]);
 
                     assert
                     (
@@ -7777,7 +7779,7 @@ describe
                  */
                 for (let i = 0; i < 3; i++)
                 {
-                    const [result] = await eslint.lintParallel([filePath]);
+                    const [result] = await eslint.lintFiles([filePath]);
 
                     assert
                     (
@@ -7855,7 +7857,7 @@ describe
                         );
                         const badFile = getFixturePath('cache/src', 'fail-file.js');
                         const goodFile = getFixturePath('cache/src', 'test-file.js');
-                        await eslint.lintParallel([badFile, goodFile]);
+                        await eslint.lintFiles([badFile, goodFile]);
                         let fileCache = fCache.createFromFile(cacheFilePath);
                         const entries = fileCache.normalizeEntries([badFile, goodFile]);
 
@@ -7923,7 +7925,7 @@ describe
                         );
                         const badFile = getFixturePath('cache/src', 'fail-file.js');
                         const goodFile = getFixturePath('cache/src', 'test-file.js');
-                        await eslint.lintParallel([badFile, goodFile]);
+                        await eslint.lintFiles([badFile, goodFile]);
                         let fileCache = fCache.createFromFile(cacheFilePath, true);
                         let entries = fileCache.normalizeEntries([badFile, goodFile]);
 
@@ -7997,7 +7999,7 @@ describe
                         const goodFileCopy =
                         join(`${dirname(goodFile)}`, 'test-file-copy.js');
                         await copyFile(goodFile, goodFileCopy);
-                        await eslint.lintParallel([badFile, goodFileCopy]);
+                        await eslint.lintFiles([badFile, goodFileCopy]);
                         let fileCache = fCache.createFromFile(cacheFilePath, true);
                         const entries = fileCache.normalizeEntries([badFile, goodFileCopy]);
 
@@ -8066,7 +8068,7 @@ describe
                 getFixturePath('fix-types/fix-all-except-unicode-bom.js');
                 const outputPath =
                 getFixturePath('fix-types/fix-all-except-unicode-bom.expected.js');
-                const results = await eslint.lintParallel([inputPath]);
+                const results = await eslint.lintFiles([inputPath]);
                 const expectedOutput = await readFile(outputPath, 'utf8');
 
                 assert.equal(results[0].output, expectedOutput);
@@ -8124,7 +8126,7 @@ describe
                 };
                 eslint = await ESLint.fromCLIOptions(cliOptions);
                 const file = getFixturePath('cache/src', 'test-file.js');
-                await assert.rejects(eslint.lintParallel([file]), error);
+                await assert.rejects(eslint.lintFiles([file]), error);
             },
         );
     },

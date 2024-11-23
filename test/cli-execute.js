@@ -1456,7 +1456,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ inlineConfig: false }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns
                         (
                             [
                                 {
@@ -1493,7 +1493,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ inlineConfig: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns([]);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1524,7 +1524,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fix: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns([]);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1561,7 +1561,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fix: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns(report);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1599,7 +1599,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fix: true, quiet: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns(report);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1647,7 +1647,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns([]);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1673,7 +1673,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match(expectedESLintOptions))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns([]);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns([]);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1710,7 +1710,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns(report);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1747,7 +1747,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true, quiet: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns(report);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -1785,7 +1785,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintParallel').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintFiles').returns(report);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
@@ -2420,11 +2420,8 @@ describe
                     '`--concurrency=auto`',
                     async () =>
                     {
-                        sinon.spy(ESLint.prototype, 'lintFiles');
                         const exitCode = await execute('--concurrency=auto passing.js');
 
-                        assert(log.error.notCalled);
-                        assert(ESLint.prototype.lintFiles.notCalled);
                         assert.equal(exitCode, 0);
                     },
                 );
@@ -2434,12 +2431,11 @@ describe
                     '`--concurrency=off`',
                     async () =>
                     {
-                        sinon.spy(ESLint.prototype, 'lintFiles');
+                        sinon.spy(globalThis, 'SharedArrayBuffer');
                         const exitCode = await execute('--concurrency=off passing.js');
 
-                        assert(log.error.notCalled);
-                        assert(ESLint.prototype.lintFiles.called);
                         assert.equal(exitCode, 0);
+                        assert(SharedArrayBuffer.notCalled);
                     },
                 );
 

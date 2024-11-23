@@ -254,5 +254,35 @@ describe
                 }
             },
         );
+
+        it
+        (
+            'should not use multithreading when `availableParallelism()` is less than 4',
+            async function ()
+            {
+                const loaderSrc =
+                `
+                import { createRequire, syncBuiltinESMExports } from 'node:module';
+                import os                                       from 'node:os';
+                import workerThreads                            from 'node:worker_threads';
+
+                os.availableParallelism = () => 3;
+                workerThreads.Worker = null;
+                syncBuiltinESMExports();
+                `;
+                const cwd = join(pkgPath, 'test', 'fixtures');
+                const execArgv = ['--import', `data:text/javascript,${encodeURI(loaderSrc)}`];
+                const childProcess =
+                fork
+                (
+                    eslintPPath,
+                    ['--no-config-lookup', 'passing.js'],
+                    { cwd, execArgv, timeout: this.timeout() },
+                );
+                const exitCode =
+                await new Promise(resolve => { childProcess.once('close', resolve); });
+                assert.equal(exitCode, 0);
+            },
+        );
     },
 );
