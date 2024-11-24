@@ -1,3 +1,10 @@
+<a name="v0.15.0"></a>
+## [v0.15.0](https://github.com/origin-1/eslint-p/releases/tag/v0.15.0) (2024-11-24)
+
+Previously, if less than 4 CPUs were available, eslint-p would run in multithread mode by default but using just one worker thread for linting.
+In this release, eslint-p defaults to running in single-thread mode like ESLint when it detects less than 4 available CPUs.
+It's always possible to enable multithread mode explicitly by setting the `--concurrency` option to a number, e.g. `--concurrency=2`.
+
 <a name="v0.14.0"></a>
 ## [v0.14.0](https://github.com/origin-1/eslint-p/releases/tag/v0.14.0) (2024-11-19)
 
