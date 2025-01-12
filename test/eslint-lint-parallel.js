@@ -4579,7 +4579,6 @@ function useFixtures()
             {
                 const typeModule = JSON.stringify({ type: 'module' }, null, 2);
                 const typeCommonJS = JSON.stringify({ type: 'commonjs' }, null, 2);
-                const newFlag = [...flag, 'unstable_ts_config'];
 
                 this.timeout(10_000);
 
@@ -4597,8 +4596,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -4623,8 +4622,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -4649,8 +4648,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -4696,8 +4695,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -4743,8 +4742,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -4790,8 +4789,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -4846,8 +4845,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -4902,8 +4901,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -4957,8 +4956,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5019,8 +5018,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5074,8 +5073,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5129,8 +5128,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5191,8 +5190,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5256,8 +5255,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5321,8 +5320,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5380,8 +5379,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5439,8 +5438,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5503,8 +5502,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5567,8 +5566,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5631,8 +5630,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5695,8 +5694,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5760,8 +5759,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5825,8 +5824,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5893,8 +5892,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5961,8 +5960,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo.js']);
@@ -5987,8 +5986,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6012,8 +6011,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6038,7 +6037,7 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag: newFlag,
+                                flag,
                                 config,
                             },
                         );
@@ -6063,8 +6062,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6089,8 +6088,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6115,8 +6114,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6140,8 +6139,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6166,8 +6165,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6192,8 +6191,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles('foo.js');
@@ -6237,58 +6236,14 @@ function useFixtures()
                         (
                             {
                                 cwd,
+                                flag,
                                 config: 'eslint.config.mcts',
-                                flag:   newFlag,
                             },
                         );
 
                         assert.equal
                         (await eslint.findConfigFile(), join(cwd, 'eslint.config.mcts'));
                         await assert.rejects(eslint.lintFiles(['foo.js']));
-                    },
-                );
-
-                it
-                (
-                    'should not load TS config files when `"unstable_ts_config"` flag is not set',
-                    async () =>
-                    {
-                        const cwd = getFixturePath('ts-config-files', 'ts');
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd,
-                                flag,
-                                config: 'eslint.config.ts',
-                            },
-                        );
-
-                        assert.equal(await eslint.findConfigFile(), join(cwd, 'eslint.config.ts'));
-                        await assert.rejects(eslint.lintFiles(['foo.js']));
-                    },
-                );
-
-                it
-                (
-                    'should fallback to JS config files when `"unstable_ts_config"` flag is not ' +
-                    'set',
-                    async () =>
-                    {
-                        const cwd = getFixturePath('ts-config-files', 'ts');
-                        eslint =
-                        await ESLint.fromCLIOptions
-                        (
-                            {
-                                cwd,
-                                flag,
-                                configLookup: true,
-                            },
-                        );
-
-                        assert.equal
-                        (await eslint.findConfigFile(), join(cwd, '../../eslint.config.js'));
-                        await assert.doesNotReject(() => eslint.lintFiles(['foo.js']));
                     },
                 );
 
@@ -6303,8 +6258,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
                         const results = await eslint.lintFiles(['foo*.js']);
@@ -6332,8 +6287,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
 
@@ -6364,8 +6319,8 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:           newFlag,
-                                configLookup:   true,
+                                flag,
+                                configLookup: true,
                             },
                         );
 
@@ -6394,7 +6349,7 @@ function useFixtures()
                         (
                             {
                                 cwd,
-                                flag:   newFlag,
+                                flag,
                                 config: 'eslint.undefined.config.ts',
                             },
                         );
