@@ -95,52 +95,6 @@ describe
 
         it
         (
-            'with `--inspect-config` and `--flag=unstable_ts_config` when the command succeeds',
-            async function ()
-            {
-                const loaderSrc =
-                `
-                import childProcess                 from 'node:child_process';
-                import { syncBuiltinESMExports }    from 'node:module';
-
-                childProcess.spawnSync = (...args) => process.send(args);
-                syncBuiltinESMExports();
-                `;
-                const cwd = join(pkgPath, 'test', 'fixtures', 'ts-config-files', 'ts');
-                const execArgv = ['--import', `data:text/javascript,${encodeURI(loaderSrc)}`];
-                const childProcess =
-                fork
-                (
-                    eslintPPath,
-                    ['--inspect-config', '--flag=unstable_ts_config'],
-                    { cwd, execArgv, silent: true, timeout: this.timeout() },
-                );
-                let actualMessage;
-                childProcess.once
-                ('message', message => { actualMessage = message; });
-                const exitCode =
-                await new Promise(resolve => { childProcess.once('close', resolve); });
-                assert.equal(exitCode, 0);
-                assert.deepEqual
-                (
-                    actualMessage,
-                    [
-                        'npx',
-                        [
-                            '@eslint/config-inspector@latest',
-                            '--config',
-                            join(cwd, 'eslint.config.ts'),
-                            '--basePath',
-                            cwd,
-                        ],
-                        { stdio: 'inherit' },
-                    ],
-                );
-            },
-        );
-
-        it
-        (
             'with `--inspect-config` when the command fails',
             async function ()
             {
