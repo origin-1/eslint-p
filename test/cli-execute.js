@@ -2351,6 +2351,105 @@ describe
 
         describe
         (
+            '--report-unused-inline-configs option',
+            () =>
+            {
+                it
+                (
+                    'does not report when --report-unused-inline-configs 0',
+                    async () =>
+                    {
+                        const exitCode =
+                        await execute
+                        (
+                            '--no-config-lookup --report-unused-inline-configs 0 --rule ' +
+                            '"\'no-console\': \'error\'"',
+                            '/* eslint no-console: \'error\' */',
+                        );
+
+                        assert.equal(log.error.callCount, 0, 'log.error should not be called');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(exitCode, 0, 'exit code should be 0');
+                    },
+                );
+
+                [
+                    [1, 0, '0 errors, 1 warning'],
+                    ['warn', 0, '0 errors, 1 warning'],
+                    [2, 1, '1 error, 0 warnings'],
+                    ['error', 1, '1 error, 0 warnings'],
+                ]
+                .forEach
+                (
+                    ([setting, status, descriptor]) =>
+                    {
+                        it
+                        (
+                            `reports when --report-unused-inline-configs ${setting}`,
+                            async () =>
+                            {
+                                const exitCode =
+                                await execute
+                                (
+                                    `--no-config-lookup --report-unused-inline-configs ${setting
+                                    } --rule "'no-console': 'error'"`,
+                                    '/* eslint no-console: \'error\' */',
+                                );
+
+                                assert.equal(log.info.callCount, 1, 'log.info is called once');
+                                assert.ok
+                                (
+                                    log.info.firstCall.args[0].includes
+                                    (
+                                        'Unused inline config (\'no-console\' is already ' +
+                                        'configured to \'error\')',
+                                    ),
+                                    'has correct message about unused inline config',
+                                );
+                                assert.ok
+                                (
+                                    log.info.firstCall.args[0].includes(descriptor),
+                                    'has correct error and warning count',
+                                );
+                                assert.equal(exitCode, status, `exit code should be ${exitCode}`);
+                            },
+                        );
+                    },
+                );
+
+                it
+                (
+                    'fails when passing invalid string for --report-unused-inline-configs',
+                    async () =>
+                    {
+                        const exitCode =
+                        await execute('--no-config-lookup --report-unused-inline-configs foo');
+
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(log.error.callCount, 1, 'log.error should be called once');
+                        const { name, version } = await import('../lib/package-info.js');
+                        const expectedURL =
+                        `https://www.npmjs.com/package/${name}/v/${version}#usage`;
+                        const lines =
+                        [
+                            'Option report-unused-inline-configs: \'foo\' not one of off, warn, ' +
+                            'error, 0, 1, or 2.',
+                            `Please see ${expectedURL} for details.`,
+                        ];
+                        assert.deepEqual
+                        (
+                            log.error.firstCall.args,
+                            [lines.join('\n')],
+                            'has the right text to log.error',
+                        );
+                        assert.equal(exitCode, 2, 'exit code should be 2');
+                    },
+                );
+            },
+        );
+
+        describe
+        (
             'unstable_config_lookup_from_file',
             () =>
             {

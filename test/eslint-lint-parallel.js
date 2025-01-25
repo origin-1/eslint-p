@@ -2428,15 +2428,15 @@ function useFixtures()
                                 (
                                     {
                                         flag,
-                                        cwd: `${otherDriveLetter}:\\`,
+                                        cwd: `${otherDriveLetter}:\\files`,
                                     },
                                 );
-                                const pattern = `${otherDriveLetter}:\\pa*ng.*`;
+                                const pattern = `${otherDriveLetter}:\\files\\???.*`;
                                 const results = await eslint.lintFiles([pattern]);
 
                                 assert.equal(results.length, 1);
                                 assert.equal
-                                (results[0].filePath, `${otherDriveLetter}:\\passing.js`);
+                                (results[0].filePath, `${otherDriveLetter}:\\files\\foo.js`);
                                 assert.equal(results[0].messages.length, 0);
                                 assert.equal(results[0].errorCount, 0);
                                 assert.equal(results[0].warningCount, 0);
