@@ -537,9 +537,6 @@ describe
             'when executing with env-info flag',
             () =>
             {
-                afterEach
-                (() => { sinon.restore(); });
-
                 it
                 (
                     'should print out environment information',
@@ -2298,21 +2295,38 @@ describe
             '--flag option',
             () =>
             {
+                let processStub;
+
+                beforeEach
+                (
+                    () =>
+                    {
+                        processStub =
+                        sinon
+                        .stub(process, 'emitWarning')
+                        .withArgs(sinon.match.any, sinon.match(/^ESLintInactiveFlag_/u))
+                        .returns();
+                    },
+                );
+
                 it
                 (
-                    'should throw an error when an inactive flag is used',
+                    'should throw an error when an inactive flag whose feature has been ' +
+                    'abandoned is used',
                     async () =>
                     {
                         const configPath = getFixturePath('eslint.config.js');
                         const filePath = getFixturePath('passing.js');
-                        const input = `--flag test_only_old --config ${configPath} ${filePath}`;
+                        const input =
+                        `--flag test_only_abandoned --config ${configPath} ${filePath}`;
 
                         await assert.rejects
                         (
                             execute(input),
                             {
                                 message:
-                                'The flag \'test_only_old\' is inactive: Used only for testing.',
+                                'The flag \'test_only_abandoned\' is inactive: This feature has ' +
+                                'been abandoned.',
                             },
                         );
                     },
@@ -2329,6 +2343,63 @@ describe
 
                         await assert.rejects
                         (execute(input), { message: 'Unknown flag \'test_only_oldx\'.' });
+                    },
+                );
+
+                it
+                (
+                    'should emit a warning and not error out when an inactive flag that has been ' +
+                    'replaced by another flag is used',
+                    async () =>
+                    {
+                        const configPath = getFixturePath('eslint.config.js');
+                        const filePath = getFixturePath('passing.js');
+                        const input =
+                        `--flag test_only_replaced --config ${configPath} ${filePath}`;
+                        const exitCode = await execute(input);
+
+                        assert.equal
+                        (processStub.callCount, 1, 'calls `process.emitWarning()` for flags once');
+                        assert.deepEqual
+                        (
+                            processStub.getCall(0).args,
+                            [
+                                'The flag \'test_only_replaced\' is inactive: This flag has been ' +
+                                'renamed \'test_only\' to reflect its stabilization. Please use ' +
+                                '\'test_only\' instead.',
+                                'ESLintInactiveFlag_test_only_replaced',
+                            ],
+                        );
+                        sinon.assert.notCalled(log.error);
+                        assert.equal(exitCode, 0);
+                    },
+                );
+
+                it
+                (
+                    'should emit a warning and not error out when an inactive flag whose feature ' +
+                    'is enabled by default is used',
+                    async () =>
+                    {
+                        const configPath = getFixturePath('eslint.config.js');
+                        const filePath = getFixturePath('passing.js');
+                        const input =
+                        `--flag test_only_enabled_by_default --config ${configPath} ${filePath}`;
+                        const exitCode = await execute(input);
+
+                        assert.equal
+                        (processStub.callCount, 1, 'calls `process.emitWarning()` for flags once');
+                        assert.deepEqual
+                        (
+                            processStub.getCall(0).args,
+                            [
+                                'The flag \'test_only_enabled_by_default\' is inactive: This ' +
+                                'feature is now enabled by default.',
+                                'ESLintInactiveFlag_test_only_enabled_by_default',
+                            ],
+                        );
+                        sinon.assert.notCalled(log.error);
+                        assert.equal(exitCode, 0);
                     },
                 );
 

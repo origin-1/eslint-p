@@ -3866,7 +3866,7 @@ function useFixtures()
                                     'b.js':             '',
                                     'ab.js':            '',
                                     '[ab].js':          '',
-                                    'eslint.config.js': 'module.exports = [];',
+                                    'eslint.config.js': 'module.exports = [{}];',
                                 },
                             },
                         );
@@ -3903,7 +3903,7 @@ function useFixtures()
                                     'a.js':             '',
                                     'b.js':             '',
                                     'ab.js':            '',
-                                    'eslint.config.js': 'module.exports = [];',
+                                    'eslint.config.js': 'module.exports = [{}];',
                                 },
                             },
                         );
@@ -6340,10 +6340,11 @@ function useFixtures()
                 it
                 (
                     'should fail to load a CommonJS TS config file that exports undefined with a ' +
-                    'helpful error message',
+                    'helpful warning message',
                     async () =>
                     {
                         const cwd = getFixturePath('ts-config-files', 'ts');
+                        const processStub = sinon.stub(process, 'emitWarning');
                         eslint =
                         await ESLint.fromCLIOptions
                         (
@@ -6353,16 +6354,11 @@ function useFixtures()
                                 config: 'eslint.undefined.config.ts',
                             },
                         );
+                        await eslint.lintFiles('foo.js');
 
-                        await assert.rejects
-                        (
-                            eslint.lintFiles('foo.js'),
-                            {
-                                message:
-                                'Config (unnamed): Unexpected undefined config at user-defined ' +
-                                'index 0.',
-                            },
-                        );
+                        assert.equal
+                        (processStub.callCount, 1, 'calls `process.emitWarning()` once');
+                        assert.equal(processStub.getCall(0).args[1], 'ESLintEmptyConfigWarning');
                     },
                 );
             },

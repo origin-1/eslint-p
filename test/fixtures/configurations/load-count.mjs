@@ -23,4 +23,4 @@ else
 }
 process.emitWarning("\n⚠\n");
 
-export default [];
+export default [{}];
