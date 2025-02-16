@@ -2717,6 +2717,35 @@ describe
 
         // Custom tests
 
+        describe
+        (
+            'when given a pattern to unignore',
+            () =>
+            {
+                const cwd = process.cwd();
+
+                beforeEach
+                (() => { process.chdir(getFixturePath('cli')); });
+
+                afterEach
+                (() => { process.chdir(cwd); });
+
+                it
+                (
+                    'should process a file',
+                    async () =>
+                    {
+                        const exitCode =
+                        await execute('--ignore-pattern !node_modules node_modules');
+
+                        assert.equal(exitCode, 1);
+                        assert(log.info.calledOnce);
+                        assert(log.error.notCalled);
+                    },
+                );
+            },
+        );
+
         it
         (
             'should return with exit code 2 if flat config mode is not enabled',

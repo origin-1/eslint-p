@@ -246,12 +246,33 @@ describe
                         writeFile(join(tmpDir, 'index.js'), ''),
                         (async () =>
                         {
-                            const subDir = join(tmpDir, 'subdir');
+                            const subDir = join(tmpDir, 'empty-array');
                             await mkdir(subDir);
                             await Promise.all
                             (
                                 [
-                                    writeFile(join(subDir, 'eslint.config.mjs'), configFileText),
+                                    writeFile
+                                    (
+                                        join(subDir, 'eslint.config.mjs'),
+                                        `import ${JSON.stringify(url)}; export default [];`,
+                                    ),
+                                    writeFile(join(subDir, 'index.js'), ''),
+                                ],
+                            );
+                        }
+                        )(),
+                        (async () =>
+                        {
+                            const subDir = join(tmpDir, 'empty-object');
+                            await mkdir(subDir);
+                            await Promise.all
+                            (
+                                [
+                                    writeFile
+                                    (
+                                        join(subDir, 'eslint.config.mjs'),
+                                        `import ${JSON.stringify(url)}; export default { };`,
+                                    ),
                                     writeFile(join(subDir, 'index.js'), ''),
                                 ],
                             );
@@ -269,7 +290,7 @@ describe
                 assert.equal(stdout, '');
                 {
                     const count = countOccurrencies(stderr, ' ESLintEmptyConfigWarning: ');
-                    assert.equal(count, 2);
+                    assert.equal(count, 3);
                 }
                 {
                     const count = countOccurrencies(stderr, '\n⚠\n');

@@ -6362,9 +6362,6 @@ function useFixtures()
                     'should fail to load a TS config file if jiti is not installed',
                     async () =>
                     {
-                        const { ConfigLoader } =
-                        await import(`${eslintDirURL}lib/config/config-loader.js`);
-                        sinon.stub(ConfigLoader, 'loadJiti').rejects();
                         const cwd = getFixturePath('ts-config-files', 'ts');
                         eslint =
                         await ESLint.fromCLIOptions
@@ -6372,9 +6369,12 @@ function useFixtures()
                             {
                                 cwd,
                                 flag,
-                                configLookup: true,
+                                concurrency:    1,
+                                configLookup:   true,
                             },
                         );
+                        eslint[createImportAsESLintModuleURLKey] =
+                        '#create-import-as-eslint-with-no-jiti-patch';
 
                         await assert.rejects
                         (
@@ -6394,9 +6394,6 @@ function useFixtures()
                     'installed',
                     async () =>
                     {
-                        const { ConfigLoader } =
-                        await import(`${eslintDirURL}lib/config/config-loader.js`);
-                        sinon.stub(ConfigLoader, 'loadJiti').resolves({ });
                         const cwd = getFixturePath('ts-config-files', 'ts');
                         eslint =
                         await ESLint.fromCLIOptions
@@ -6404,9 +6401,12 @@ function useFixtures()
                             {
                                 cwd,
                                 flag,
-                                configLookup: true,
+                                concurrency:    1,
+                                configLookup:   true,
                             },
                         );
+                        eslint[createImportAsESLintModuleURLKey] =
+                        '#create-import-as-eslint-with-outdated-jiti-patch';
 
                         await assert.rejects
                         (
@@ -8082,6 +8082,56 @@ describe
 
 describe
 (
+    'When passed an empty config file',
+    () =>
+    {
+        useFixtures();
+
+        afterEach
+        (() => { sinon.restore(); });
+
+        it
+        (
+            'Each instance should warn once',
+            async () =>
+            {
+                const cwd = getFixturePath();
+                sinon.stub(process, 'emitWarning');
+                {
+                    const eslint =
+                    await ESLint.fromCLIOptions
+                    (
+                        {
+                            concurrency:    1,
+                            config:         'configurations/empty.js',
+                            cwd,
+                        },
+                    );
+                    await eslint.lintFiles('passing.js');
+                }
+                {
+                    const eslint =
+                    await ESLint.fromCLIOptions
+                    (
+                        {
+                            concurrency:    0,
+                            config:         'configurations/empty.js',
+                            cwd,
+                        },
+                    );
+                    await eslint.lintFiles('passing.js');
+                }
+
+                assert(process.emitWarning.calledTwice);
+                assert.equal(process.emitWarning.firstCall.args[1],     'ESLintEmptyConfigWarning');
+                assert.equal(process.emitWarning.secondCall.args[1],    'ESLintEmptyConfigWarning');
+            },
+        );
+    },
+);
+
+describe
+(
     'Fix types when \'quiet\' option is true',
     () =>
     {
@@ -8121,7 +8171,6 @@ describe
     () =>
     {
         let cacheFilePath;
-
         useFixtures();
 
         afterEach

@@ -53,7 +53,9 @@
   },
   "imports": {
     "#create-import-as-eslint": "./lib/create-import-as.js",
-    "#create-import-as-eslint-with-linter-patch": "./test/_utils/create-import-as-eslint-with-linter-patch.js"
+    "#create-import-as-eslint-with-linter-patch": "./test/_utils/create-import-as-eslint-with-linter-patch.js",
+    "#create-import-as-eslint-with-no-jiti-patch": "./test/_utils/create-import-as-eslint-with-no-jiti-patch.js",
+    "#create-import-as-eslint-with-outdated-jiti-patch": "./test/_utils/create-import-as-eslint-with-outdated-jiti-patch.js"
   },
   "type": "module"
 }
