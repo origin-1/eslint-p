@@ -7,7 +7,7 @@ const usedDeprecatedRulesCache = new WeakMap();
 
 export default async function createProcessLintReport(importAsESLint, privateMembers)
 {
-    const [{ getRuleFromConfig }, { Legacy: { ConfigOps: { getRuleSeverity } } }] =
+    const [{ getRuleFromConfig }, { Legacy: { ConfigOps: { getRuleSeverity }, naming } }] =
     await Promise.all
     (
         [

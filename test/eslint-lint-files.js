@@ -135,9 +135,22 @@ function useFixtures()
     'lintFiles()',
     flag =>
     {
+        let coreRules;
         let eslint;
 
         useFixtures();
+
+        before
+        (
+            async () =>
+            {
+                const importAsESLint = createImportAs(eslintDirURL);
+                ({ default: coreRules } = await importAsESLint('./lib/rules'));
+            },
+        );
+
+        after
+        (() => { coreRules = undefined; });
 
         it
         (
@@ -2772,10 +2785,12 @@ function useFixtures()
                             {
                                 flag,
                                 cwd: originalDir,
+                                config:
+                                getFixturePath('configurations', 'deprecated-rules.js'),
                                 rule:
                                 {
-                                    'indent-legacy':    1,
-                                    'callback-return':  1,
+                                    'test/deprecated-with-replacement':     'error',
+                                    'test/deprecated-without-replacement':  'error',
                                 },
                             },
                         );
@@ -2785,8 +2800,16 @@ function useFixtures()
                         (
                             results[0].usedDeprecatedRules,
                             [
-                                { ruleId: 'indent-legacy', replacedBy: ['indent'] },
-                                { ruleId: 'callback-return', replacedBy: [] },
+                                {
+                                    ruleId:     'test/deprecated-with-replacement',
+                                    replacedBy: ['replacement'],
+                                    info:       void 0,
+                                },
+                                {
+                                    ruleId:     'test/deprecated-without-replacement',
+                                    replacedBy: [],
+                                    info:       void 0,
+                                },
                             ],
                         );
                     },
@@ -2836,7 +2859,59 @@ function useFixtures()
                         assert.deepEqual
                         (
                             results[0].usedDeprecatedRules,
-                            [{ ruleId: 'indent-legacy', replacedBy: ['indent'] }],
+                            [
+                                {
+                                    ruleId:     'indent-legacy',
+                                    replacedBy: ['@stylistic/js/indent'],
+                                    info:       coreRules.get('indent-legacy').meta.deprecated,
+                                },
+                            ],
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should add the plugin name to the replacement if available',
+                    async () =>
+                    {
+                        const deprecated =
+                        {
+                            message:    'Deprecation',
+                            url:        'https://example.com',
+                            replacedBy:
+                            [
+                                {
+                                    message:    'Replacement',
+                                    plugin:     { name: 'plugin' },
+                                    rule:       { name: 'name' },
+                                },
+                            ],
+                        };
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd:    originalDir,
+                                config:
+                                getFixturePath
+                                ('configurations', 'deprecated-rule-with-new-plugin.js'),
+                                rule:   { 'test/deprecated': 'error' },
+                            },
+                        );
+                        const results = await eslint.lintFiles(['lib/eslint-*.js']);
+
+                        assert.deepEqual
+                        (
+                            results[0].usedDeprecatedRules,
+                            [
+                                {
+                                    ruleId:     'test/deprecated',
+                                    replacedBy: ['plugin/name'],
+                                    info:       deprecated,
+                                },
+                            ],
                         );
                     },
                 );
@@ -2934,6 +3009,25 @@ function useFixtures()
                         const results = await eslint.lintFiles([join(fixtureDir, 'fixmode')]);
                         results.forEach(convertCRLF);
 
+                        const usedDeprecatedRules =
+                        [
+                            {
+                                ruleId:     'semi',
+                                replacedBy: ['@stylistic/js/semi'],
+                                info:       coreRules.get('semi').meta.deprecated,
+                            },
+                            {
+                                ruleId:     'quotes',
+                                replacedBy: ['@stylistic/js/quotes'],
+                                info:       coreRules.get('quotes').meta.deprecated,
+                            },
+                            {
+                                ruleId:     'space-infix-ops',
+                                replacedBy: ['@stylistic/js/space-infix-ops'],
+                                info:
+                                coreRules.get('space-infix-ops').meta.deprecated,
+                            },
+                        ];
                         assert.deepEqual
                         (
                             results,
@@ -2949,21 +3043,7 @@ function useFixtures()
                                     fixableErrorCount:      0,
                                     fixableWarningCount:    0,
                                     output:                 'true ? "yes" : "no";\n',
-                                    usedDeprecatedRules:
-                                    [
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'semi',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'quotes',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'space-infix-ops',
-                                        },
-                                    ],
+                                    usedDeprecatedRules,
                                 },
                                 {
                                     filePath:               join(fixtureDir, 'fixmode/ok.js'),
@@ -2974,21 +3054,7 @@ function useFixtures()
                                     fatalErrorCount:        0,
                                     fixableErrorCount:      0,
                                     fixableWarningCount:    0,
-                                    usedDeprecatedRules:
-                                    [
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'semi',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'quotes',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'space-infix-ops',
-                                        },
-                                    ],
+                                    usedDeprecatedRules,
                                 },
                                 {
                                     filePath:
@@ -3015,21 +3081,7 @@ function useFixtures()
                                     fixableWarningCount:    0,
                                     output:
                                     'var msg = "hi";\nif (msg == "hi") {\n\n}\n',
-                                    usedDeprecatedRules:
-                                    [
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'semi',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'quotes',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'space-infix-ops',
-                                        },
-                                    ],
+                                    usedDeprecatedRules,
                                 },
                                 {
                                     filePath:
@@ -3055,21 +3107,7 @@ function useFixtures()
                                     fixableErrorCount:      0,
                                     fixableWarningCount:    0,
                                     output:                 'var msg = "hi" + foo;\n',
-                                    usedDeprecatedRules:
-                                    [
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'semi',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'quotes',
-                                        },
-                                        {
-                                            replacedBy: [],
-                                            ruleId:     'space-infix-ops',
-                                        },
-                                    ],
+                                    usedDeprecatedRules,
                                 },
                             ],
                         );
@@ -3249,6 +3287,52 @@ function useFixtures()
                         (results[0].messages[0].message, '\'b\' is defined but never used.');
                         assert.equal(results[0].messages[0].ruleId, 'post-processed');
                         assert.equal(results[0].suppressedMessages.length, 0);
+                    },
+                );
+
+                // https://github.com/eslint/markdown/blob/main/rfcs/
+                // configure-file-name-from-block-meta.md#name-uniqueness
+                it
+                (
+                    'should allow processors to return filenames with a slash and treat them as ' +
+                    'subpaths',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                config: getFixturePath('configurations', 'filenames-with-slash.js'),
+                                cwd:    join(fixtureDir, '..'),
+                            },
+                        );
+                        const filename = getFixturePath('processors', 'test', 'test-subpath.txt');
+                        const [result] = await eslint.lintFiles([filename]);
+
+                        assert.equal(result.messages.length, 3);
+                        assert.equal(result.messages[0].ruleId, 'test/test-rule');
+                        assert.equal
+                        (
+                            result.messages[0].message,
+                            `filename: ${join(filename, '0_example-0', 'a.js')
+                            } physicalFilename: ${filename} identifier: foo`,
+                        );
+                        assert.equal(result.messages[1].ruleId, 'test/test-rule');
+                        assert.equal
+                        (
+                            result.messages[1].message,
+                            `filename: ${join(filename, '1_example-1', 'a.js')
+                            } physicalFilename: ${filename} identifier: bar`,
+                        );
+                        assert.equal(result.messages[2].ruleId, 'test/test-rule');
+                        assert.equal
+                        (
+                            result.messages[2].message,
+                            `filename: ${join(filename, '2_example-2', 'a.js')
+                            } physicalFilename: ${filename} identifier: baz`,
+                        );
+                        assert.equal(result.suppressedMessages.length, 0);
                     },
                 );
             },

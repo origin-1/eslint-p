@@ -1,13 +1,13 @@
-import assert           from 'node:assert/strict';
+import assert               from 'node:assert/strict';
 
 import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync }
 from 'node:fs';
 
-import { tmpdir }       from 'node:os';
-import { join }         from 'node:path';
-import createCLIExecute from '../lib/create-cli-execute.js';
-import eslintDirURL     from '../lib/default-eslint-dir-url.js';
-import sinon            from 'sinon';
+import { tmpdir }           from 'node:os';
+import { join, resolve }    from 'node:path';
+import createCLIExecute     from '../lib/create-cli-execute.js';
+import eslintDirURL         from '../lib/default-eslint-dir-url.js';
+import sinon                from 'sinon';
 
 /**
  * Adjust timeout for a test with two `execute` calls.
@@ -2514,6 +2514,188 @@ describe
                             'has the right text to log.error',
                         );
                         assert.equal(exitCode, 2, 'exit code should be 2');
+                    },
+                );
+            },
+        );
+
+        describe
+        (
+            '--ext option', () =>
+            {
+                const cwd = process.cwd();
+
+                beforeEach
+                (() => { process.chdir(getFixturePath('file-extensions')); });
+
+                afterEach
+                (() => { process.chdir(cwd); });
+
+                it
+                (
+                    'when not provided, without config file only default extensions should be ' +
+                    'linted',
+                    async () =>
+                    {
+                        const exitCode = await execute('--no-config-lookup -f json .');
+
+                        assert.equal(exitCode, 0, 'exit code should be 0');
+                        const results = JSON.parse(log.info.args[0][0]);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => filePath).sort(),
+                            ['a.js', 'b.mjs', 'c.cjs', 'eslint.config.js']
+                            .map(filename => resolve(filename)),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'when not provided, only default extensions and extensions from the config ' +
+                    'file should be linted',
+                    async () =>
+                    {
+                        const exitCode = await execute('-f json .');
+
+                        assert.equal(exitCode, 0, 'exit code should be 0');
+                        const results = JSON.parse(log.info.args[0][0]);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => filePath).sort(),
+                            ['a.js', 'b.mjs', 'c.cjs', 'd.jsx', 'eslint.config.js']
+                            .map(filename => resolve(filename)),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should include an additional extension when specified with dot',
+                    async () =>
+                    {
+                        const exitCode = await execute('-f json --ext .ts .');
+
+                        assert.equal(exitCode, 0, 'exit code should be 0');
+                        const results = JSON.parse(log.info.args[0][0]);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => filePath).sort(),
+                            ['a.js', 'b.mjs', 'c.cjs', 'd.jsx', 'eslint.config.js', 'f.ts']
+                            .map(filename => resolve(filename)),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should include an additional extension when specified without dot',
+                    async () =>
+                    {
+                        const exitCode = await execute('-f json --ext ts .');
+
+                        assert.equal(exitCode, 0, 'exit code should be 0');
+                        const results = JSON.parse(log.info.args[0][0]);
+                        // should not include "foots"
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => filePath).sort(),
+                            ['a.js', 'b.mjs', 'c.cjs', 'd.jsx', 'eslint.config.js', 'f.ts']
+                            .map(filename => resolve(filename)),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should include multiple additional extensions when specified by repeating ' +
+                    'the option',
+                    async () =>
+                    {
+                        const exitCode = await execute('-f json --ext .ts --ext tsx .');
+
+                        assert.equal(exitCode, 0, 'exit code should be 0');
+                        const results = JSON.parse(log.info.args[0][0]);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => filePath).sort(),
+                            ['a.js', 'b.mjs', 'c.cjs', 'd.jsx', 'eslint.config.js', 'f.ts', 'g.tsx']
+                            .map(filename => resolve(filename)),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should include multiple additional extensions when specified with ' +
+                    'comma-delimited list',
+                    async () =>
+                    {
+                        const exitCode = await execute('-f json --ext .ts,.tsx .');
+
+                        assert.equal(exitCode, 0, 'exit code should be 0');
+                        const results = JSON.parse(log.info.args[0][0]);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => filePath).sort(),
+                            ['a.js', 'b.mjs', 'c.cjs', 'd.jsx', 'eslint.config.js', 'f.ts', 'g.tsx']
+                            .map(filename => resolve(filename)),
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should fail when passing --ext ""',
+                    async () =>
+                    {
+                        // When passing "" on command line, its corresponding item in process.argv[]
+                        // is an empty string
+                        const exitCode = await execute(['argv0', 'argv1', '--ext', '']);
+
+                        assert.equal(exitCode, 2, 'exit code should be 2');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(log.error.callCount, 1, 'log.error should be called once');
+                        assert.deepEqual
+                        (log.error.firstCall.args[0], 'The --ext option value cannot be empty.');
+                    },
+                );
+
+                it
+                (
+                    'should fail when passing --ext ,ts',
+                    async () =>
+                    {
+                        const exitCode = await execute('--ext ,ts');
+
+                        assert.equal(exitCode, 2, 'exit code should be 2');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(log.error.callCount, 1, 'log.error should be called once');
+                        assert.deepEqual
+                        (
+                            log.error.firstCall.args[0],
+                            'The --ext option arguments cannot be empty strings. ' +
+                            'Found an empty string at index 0.',
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should fail when passing --ext ts,,tsx',
+                    async () =>
+                    {
+                        const exitCode = await execute('--ext ts,,tsx');
+
+                        assert.equal(exitCode, 2, 'exit code should be 2');
+                        assert.equal(log.info.callCount, 0, 'log.info should not be called');
+                        assert.equal(log.error.callCount, 1, 'log.error should be called once');
+                        assert.deepEqual
+                        (
+                            log.error.firstCall.args[0],
+                            'The --ext option arguments cannot be empty strings. Found an empty ' +
+                            'string at index 1.',
+                        );
                     },
                 );
             },
