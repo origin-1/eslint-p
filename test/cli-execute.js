@@ -2140,25 +2140,13 @@ describe
             '`--plugin` option',
             () =>
             {
-                let originalCwd;
+                const cwd = process.cwd();
 
                 beforeEach
-                (
-                    () =>
-                    {
-                        originalCwd = process.cwd();
-                        process.chdir(getFixturePath('plugins'));
-                    },
-                );
+                (() => { process.chdir(getFixturePath('plugins')); });
 
                 afterEach
-                (
-                    () =>
-                    {
-                        process.chdir(originalCwd);
-                        originalCwd = undefined;
-                    },
-                );
+                (() => { process.chdir(cwd); });
 
                 it
                 (
@@ -2737,7 +2725,7 @@ describe
                 sinon.define(process.env, 'ESLINT_USE_FLAT_CONFIG', 'false');
                 const exitCode = await execute('');
 
-                assert.equal(log.error.callCount, 1);
+                assert(log.error.calledOnce);
                 assert.equal(exitCode, 2);
             },
         );
@@ -2747,25 +2735,13 @@ describe
             '`--concurrency` option',
             () =>
             {
-                let originalCwd;
+                const cwd = process.cwd();
 
                 beforeEach
-                (
-                    () =>
-                    {
-                        originalCwd = process.cwd();
-                        process.chdir(getFixturePath());
-                    },
-                );
+                (() => { process.chdir(getFixturePath()); });
 
                 afterEach
-                (
-                    () =>
-                    {
-                        process.chdir(originalCwd);
-                        originalCwd = undefined;
-                    },
-                );
+                (() => { process.chdir(cwd); });
 
                 it
                 (

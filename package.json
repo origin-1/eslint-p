@@ -52,8 +52,8 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#create-verify-text": "./grab/create-verify-text.js",
-    "#create-verify-text-with-call-id": "./test/_utils/create-verify-text-with-call-id.js"
+    "#create-import-as-eslint": "./lib/create-import-as.js",
+    "#create-import-as-eslint-with-linter-patch": "./test/_utils/create-import-as-eslint-with-linter-patch.js"
   },
   "type": "module"
 }

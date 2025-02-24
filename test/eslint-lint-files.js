@@ -15,7 +15,7 @@ import createImportAs                                           from '../lib/cre
 import eslintDirURL
 from '../lib/default-eslint-dir-url.js';
 
-import patchESLint, { createVerifyTextModuleURLKey }            from '../lib/patch-eslint.js';
+import patchESLint, { createImportAsESLintModuleURLKey }        from '../lib/patch-eslint.js';
 import { createCustomTeardown, unIndent }                       from './_utils/index.js';
 import sinon                                                    from 'sinon';
 
@@ -7110,12 +7110,13 @@ describe
                         concurrency:    1,
                     },
                 );
-                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
+                eslint[createImportAsESLintModuleURLKey] =
+                '#create-import-as-eslint-with-linter-patch';
                 const file = join(cwd, 'test-file.js');
                 const results = await eslint.lintFiles([file]);
 
                 assert.equal(results.length, 1);
-                const [{ errorCount, warningCount, verifyTextCallID }] = results;
+                const [{ errorCount, warningCount, suppressedMessages: { callId } }] = results;
                 assert.equal
                 (
                     errorCount + warningCount,
@@ -7124,7 +7125,7 @@ describe
                 );
                 assert
                 (
-                    verifyTextCallID,
+                    callId,
                     'ESLint should have read the file because there was no cache file',
                 );
                 assert
@@ -7149,12 +7150,14 @@ describe
                         concurrency:    1,
                     },
                 );
-                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
+                eslint[createImportAsESLintModuleURLKey] =
+                '#create-import-as-eslint-with-linter-patch';
                 const [newResult] = await eslint.lintFiles([file]);
 
                 assert
                 (
-                    newResult.verifyTextCallID && newResult.verifyTextCallID !== verifyTextCallID,
+                    newResult.suppressedMessages.callId &&
+                    newResult.suppressedMessages.callId !== callId,
                     'ESLint should have read the file again because it\'s considered ' +
                     'changed because the config changed',
                 );
@@ -7205,13 +7208,14 @@ describe
                         concurrency:    1,
                     },
                 );
-                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
+                eslint[createImportAsESLintModuleURLKey] =
+                '#create-import-as-eslint-with-linter-patch';
                 const file = getFixturePath('cache/src', 'test-file.js');
                 const results = await eslint.lintFiles([file]);
 
                 assert
                 (
-                    results[0].verifyTextCallID,
+                    results[0].suppressedMessages.callId,
                     'ESLint should have read the file because there was no cache file',
                 );
                 assert
@@ -7236,14 +7240,15 @@ describe
                         concurrency:    1,
                     },
                 );
-                eslint[createVerifyTextModuleURLKey] = '#create-verify-text-with-call-id';
+                eslint[createImportAsESLintModuleURLKey] =
+                '#create-import-as-eslint-with-linter-patch';
                 const cachedResults = await eslint.lintFiles([file]);
 
-                assert.deepEqual(results, cachedResults, 'the result should have been the same');
+                // `callId` is not cached because `suppressedMessages` is an array.
+                delete results[0].suppressedMessages.callId;
 
                 // assert the file was not processed because the cache was used
-
-                // The value of `verifyTextCallID` on the result did not change.
+                assert.deepEqual(results, cachedResults, 'the result should have been the same');
             },
         );
 
@@ -8080,8 +8085,6 @@ describe
     'Fix types when \'quiet\' option is true',
     () =>
     {
-        let eslint;
-
         useFixtures();
 
         it
@@ -8089,7 +8092,7 @@ describe
             'should fix all except one problem when \'fixType\' array has only \'suggestion\'',
             async () =>
             {
-                eslint =
+                const eslint =
                 await ESLint.fromCLIOptions
                 (
                     {
@@ -8118,7 +8121,6 @@ describe
     () =>
     {
         let cacheFilePath;
-        let eslint;
 
         useFixtures();
 
@@ -8159,7 +8161,7 @@ describe
                     },
                     cwd:            join(fixtureDir, '..'),
                 };
-                eslint = await ESLint.fromCLIOptions(cliOptions);
+                const eslint = await ESLint.fromCLIOptions(cliOptions);
                 const file = getFixturePath('cache/src', 'test-file.js');
                 await assert.rejects(eslint.lintFiles([file]), error);
             },
