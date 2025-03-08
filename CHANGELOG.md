@@ -1,3 +1,9 @@
+<a name="v0.19.0"></a>
+## [v0.19.0](https://github.com/origin-1/eslint-p/releases/tag/v0.19.0) (2025-03-08)
+
+This release updates the used ESLint version to [v9.22.0](https://eslint.org/blog/2025/03/eslint-v9.22.0-released/).
+The [README file](https://github.com/origin-1/eslint-p/blob/main/README.md) has been extended with instructions on how to debug the number of worker threads in use, and a paragraph about the ESLint multithread linting RFC.
+
 <a name="v0.18.0"></a>
 ## [v0.18.0](https://github.com/origin-1/eslint-p/releases/tag/v0.18.0) (2025-02-24)
 
