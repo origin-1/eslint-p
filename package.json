@@ -32,7 +32,7 @@
     "version": "git add CHANGELOG.md"
   },
   "dependencies": {
-    "eslint": "9.22.0"
+    "eslint": "9.23.0"
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^1.9.1",
@@ -43,7 +43,7 @@
     "globals": "^16.0.0",
     "jiti": "^2.4.2",
     "mocha": "^11.1.0",
-    "sinon": "^19.0.2"
+    "sinon": "^19.0.4"
   },
   "engines": {
     "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
