@@ -1,6 +1,7 @@
 /* eslint no-unused-vars: 'off' */
 
-import path from 'node:path';
+import path                 from 'node:path';
+import getPlaceholderPath   from './get-placeholder-path.js';
 
 /** @type {WeakMap<ExtractedConfig, DeprecatedRuleInfo[]>} */
 const usedDeprecatedRulesCache = new WeakMap();
