@@ -3071,6 +3071,23 @@ function useFixtures()
                                             nodeType:  'BinaryExpression',
                                             ruleId:    'eqeqeq',
                                             severity:  2,
+                                            suggestions:
+                                            [
+                                                {
+                                                    data:
+                                                    {
+                                                        actualOperator:   '==',
+                                                        expectedOperator: '===',
+                                                    },
+                                                    desc:      'Use \'===\' instead of \'==\'.',
+                                                    fix:
+                                                    {
+                                                        range: [24, 26],
+                                                        text:  '===',
+                                                    },
+                                                    messageId: 'replaceOperator',
+                                                },
+                                            ],
                                         },
                                     ],
                                     suppressedMessages:     [],
@@ -7303,8 +7320,7 @@ describe
 
         it
         (
-            'should not throw an error if the cache file to be deleted does not exist on ' +
-            'a read-only file system',
+            'should not attempt to delete the cache file if it does not exist',
             async () =>
             {
                 cacheFilePath = getFixturePath('.eslintcache');
@@ -7314,10 +7330,7 @@ describe
                     !await fileExists(cacheFilePath),
                     'the cache file already exists and wasn\'t successfully deleted',
                 );
-
-                // Simulate a read-only file system.
-                sinon.stub(fsPromises, 'unlink').rejects
-                (Object.assign(Error('read-only file system'), { code: 'EROFS' }));
+                sinon.spy(fsPromises, 'unlink');
                 const cliOptions =
                 {
                     // specifying cache false the cache will be deleted
@@ -7336,9 +7349,82 @@ describe
 
                 assert
                 (
-                    fsPromises.unlink.calledWithExactly(cacheFilePath),
+                    fsPromises.unlink.notCalled,
                     'Expected attempt to delete the cache was not made.',
                 );
+            },
+        );
+
+        it
+        (
+            'should throw an error if the cache file to be deleted exist on a read-only file ' +
+            'system',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await writeFile(cacheFilePath, '');
+
+                // Simulate a read-only file system.
+                sinon.stub(fsPromises, 'unlink')
+                .rejects(Object.assign(Error('read-only file system'), { code: 'EROFS' }));
+                const cliOptions =
+                {
+                    // specifying cache false the cache will be deleted
+                    cache:          false,
+                    cacheLocation:  cacheFilePath,
+                    rule:
+                    {
+                        'no-console':       0,
+                        'no-unused-vars':   2,
+                    },
+                    cwd:            join(fixtureDir, '..'),
+                };
+                eslint = await ESLint.fromCLIOptions(cliOptions);
+                const file = getFixturePath('cache/src', 'test-file.js');
+
+                await assert.rejects
+                (
+                    eslint.lintFiles([file]),
+                    { message: 'read-only file system' },
+                );
+            },
+        );
+
+        it
+        (
+            'should not throw an error if deleting fails but cache file no longer exists',
+            async () =>
+            {
+                cacheFilePath = getFixturePath('.eslintcache');
+                await writeFile(cacheFilePath, '');
+
+                // Simulate a read-only file system.
+                sinon.stub(fsPromises, 'unlink')
+                .callsFake
+                (
+                    async () =>
+                    {
+                        await doDelete(cacheFilePath);
+                        throw Error('Failed to delete cache file');
+                    },
+                );
+                const cliOptions =
+                {
+                    // specifying cache false the cache will be deleted
+                    cache:          false,
+                    cacheLocation:  cacheFilePath,
+                    rule:
+                    {
+                        'no-console':       0,
+                        'no-unused-vars':   2,
+                    },
+                    cwd:            join(fixtureDir, '..'),
+                };
+                eslint = await ESLint.fromCLIOptions(cliOptions);
+                const file = getFixturePath('cache/src', 'test-file.js');
+                await eslint.lintFiles([file]);
+
+                assert(fsPromises.unlink.calledWithExactly(cacheFilePath));
             },
         );
 
@@ -8110,60 +8196,6 @@ describe
                 const expectedOutput = await readFile(outputPath, 'utf8');
 
                 assert.equal(results[0].output, expectedOutput);
-            },
-        );
-    },
-);
-
-describe
-(
-    'Cache file deletion',
-    () =>
-    {
-        let cacheFilePath;
-
-        useFixtures();
-
-        afterEach
-        (
-            async () =>
-            {
-                if (cacheFilePath)
-                    await rm(cacheFilePath, { force: true, recursive: true });
-                cacheFilePath = undefined;
-            },
-        );
-
-        it
-        (
-            'should throw an error if the cache file cannot be deleted',
-            async () =>
-            {
-                cacheFilePath = getFixturePath('.eslintcache');
-                await rm(cacheFilePath, { force: true, recursive: true });
-                assert
-                (
-                    !await fileExists(cacheFilePath),
-                    'the cache file already exists and wasn\'t successfully deleted',
-                );
-
-                const error = Object.assign(Error('access denied'), { code: 'EACCES' });
-                sinon.stub(fsPromises, 'unlink').rejects(error);
-                const cliOptions =
-                {
-                    // specifying cache false the cache will be deleted
-                    cache:          false,
-                    cacheLocation:  cacheFilePath,
-                    rule:
-                    {
-                        'no-console':       0,
-                        'no-unused-vars':   2,
-                    },
-                    cwd:            join(fixtureDir, '..'),
-                };
-                const eslint = await ESLint.fromCLIOptions(cliOptions);
-                const file = getFixturePath('cache/src', 'test-file.js');
-                await assert.rejects(eslint.lintFiles([file]), error);
             },
         );
     },
