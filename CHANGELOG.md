@@ -1,3 +1,8 @@
+<a name="v0.22.0"></a>
+## [v0.22.0](https://github.com/origin-1/eslint-p/releases/tag/v0.22.0) (2025-05-03)
+
+This release updates the used ESLint version to [v9.26.0](https://eslint.org/blog/2025/05/eslint-v9.26.0-released/).
+
 <a name="v0.21.0"></a>
 ## [v0.21.0](https://github.com/origin-1/eslint-p/releases/tag/v0.21.0) (2025-04-22)
 
