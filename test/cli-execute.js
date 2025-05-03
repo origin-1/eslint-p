@@ -1782,7 +1782,7 @@ describe
                         .expects('fromCLIOptions')
                         .withExactArgs(sinon.match({ fixDryRun: true }))
                         .callThrough();
-                        sinon.stub(ESLint.prototype, 'lintFiles').returns(report);
+                        sinon.stub(ESLint.prototype, 'lintText').returns(report);
                         sinon
                         .stub(ESLint.prototype, 'loadFormatter')
                         .returns({ format: () => 'done' });
