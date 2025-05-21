@@ -42,7 +42,7 @@ describe
                     stdout.endsWith
                     (
                         '--concurrency Int|String         Number of linting threads, auto to ' +
-                        'choose automatically, off to disable mulithreading - default: auto\n',
+                        'choose automatically, off to disable multithreading - default: auto\n',
                     ),
                 );
             },
