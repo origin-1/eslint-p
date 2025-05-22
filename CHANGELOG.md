@@ -1,3 +1,8 @@
+<a name="v0.23.1"></a>
+## [v0.23.1](https://github.com/origin-1/eslint-p/releases/tag/v0.23.1) (2025-05-22)
+
+Fixed a typo in the description of the `--concurrency` option.
+
 <a name="v0.23.0"></a>
 ## [v0.23.0](https://github.com/origin-1/eslint-p/releases/tag/v0.23.0) (2025-05-17)
 
