@@ -34,7 +34,7 @@
     "version": "git add CHANGELOG.md"
   },
   "dependencies": {
-    "eslint": "9.27.0"
+    "eslint": "9.28.0"
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^1.10.0",

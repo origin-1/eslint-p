@@ -119,6 +119,8 @@ describe
             'no-sparse-arrays',
         ];
         const ARGS_WITH_PRUNE_SUPPRESSIONS = [...ARGS_WITHOUT_SUPPRESSIONS, '--prune-suppressions'];
+        const ARGS_WITH_PASS_ON_UNPRUNED_SUPPRESSIONS =
+        ARGS_WITHOUT_SUPPRESSIONS.concat('--pass-on-unpruned-suppressions');
         const SUPPRESSIONS_FILE_WITH_INDENT =
         {
             [SOURCE_PATH]:
@@ -873,15 +875,89 @@ describe
 
                 it
                 (
-                    'exits with code 2, when there are unused violations',
+                    'exits with code 2, when there are unused suppressions',
                     async () =>
                     {
                         const suppressions = structuredClone(SUPPRESSIONS_FILE_ALL_ERRORS);
                         suppressions[SOURCE_PATH].indent.count = 10;
                         await writeFile(SUPPRESSIONS_PATH, JSON.stringify(suppressions, null, 2));
                         const child = runESLint(ARGS_WITHOUT_SUPPRESSIONS);
+                        const exitCodeAssertion = assertExitCode(child, 2);
+                        const outputAssertion =
+                        getOutput(child).then
+                        (
+                            output =>
+                            {
+                                assert
+                                (
+                                    output.stderr.includes
+                                    (
+                                        'There are suppressions left that do not occur anymore. ' +
+                                        'Consider re-running the command with ' +
+                                        '`--prune-suppressions`.',
+                                    ),
+                                );
+                            },
+                        );
+                        return Promise.all([exitCodeAssertion, outputAssertion]);
+                    },
+                );
 
-                        await assertExitCode(child, 2);
+                it
+                (
+                    'exits with code 0, when there are unused suppressions and the ' +
+                    '--pass-on-unpruned-suppressions flag is used',
+                    async () =>
+                    {
+                        const suppressions = structuredClone(SUPPRESSIONS_FILE_ALL_ERRORS);
+                        suppressions[SOURCE_PATH].indent.count = 10;
+                        await writeFile(SUPPRESSIONS_PATH, JSON.stringify(suppressions, null, 2));
+                        const child = runESLint(ARGS_WITH_PASS_ON_UNPRUNED_SUPPRESSIONS);
+                        const exitCodeAssertion = assertExitCode(child, 0);
+                        const outputAssertion =
+                        getOutput(child).then
+                        (output => { assert(!output.stderr.includes('suppressions left')); });
+                        return Promise.all([exitCodeAssertion, outputAssertion]);
+                    },
+                );
+
+                it
+                (
+                    'exits with code 1 if there are unsuppressed lint errors, when there are ' +
+                    'unused suppressions and the --pass-on-unpruned-suppressions flag is used (1)',
+                    async () =>
+                    {
+                        const suppressions = structuredClone(SUPPRESSIONS_FILE_ALL_ERRORS);
+                        suppressions[SOURCE_PATH].indent.count = 10;
+                        suppressions[SOURCE_PATH]['no-sparse-arrays'].count--;
+                        await writeFile(SUPPRESSIONS_PATH, JSON.stringify(suppressions, null, 2));
+                        const child = runESLint(ARGS_WITH_PASS_ON_UNPRUNED_SUPPRESSIONS);
+                        const exitCodeAssertion = assertExitCode(child, 1);
+                        const outputAssertion = getOutput(child).then
+                        (output => { assert(!output.stderr.includes('suppressions left')); });
+                        return Promise.all([exitCodeAssertion, outputAssertion]);
+                    },
+                );
+
+                it
+                (
+                    'exits with code 1 if there are unsuppressed lint errors, when there are ' +
+                    'unused suppressions and the --pass-on-unpruned-suppressions flag is used (2)',
+                    async () =>
+                    {
+                        const suppressions = structuredClone(SUPPRESSIONS_FILE_ALL_ERRORS);
+                        suppressions[SOURCE_PATH].indent.count = 10;
+                        await writeFile(SUPPRESSIONS_PATH, JSON.stringify(suppressions, null, 2));
+                        const child =
+                        runESLint
+                        (
+                            ARGS_WITH_PASS_ON_UNPRUNED_SUPPRESSIONS.concat
+                            ('--rule=no-restricted-syntax:[error, \'IfStatement\']'),
+                        );
+                        const exitCodeAssertion = assertExitCode(child, 1);
+                        const outputAssertion = getOutput(child).then
+                        (output => { assert(!output.stderr.includes('suppressions left')); });
+                        return Promise.all([exitCodeAssertion, outputAssertion]);
                     },
                 );
 
