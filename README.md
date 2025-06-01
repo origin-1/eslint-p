@@ -84,8 +84,8 @@ If you don't see a lint containing `worker thread(s)` in the debug output, then 
 
 ## Multithread Linting in ESLint
 
-ESLint is considering the possibility of integrating multithread linting as a built-in feature.
-You can follow [the related proposal](https://github.com/eslint/rfcs/pull/129) for more information.
+ESLint has decided to integrate multithread linting as a built-in feature in an upcoming release.
+You can follow [the related pull request](https://github.com/eslint/eslint/pull/19794) for more information.
 
 [npm badge]: https://img.shields.io/npm/v/eslint-p?logo=npm
 [npm URL]: https://www.npmjs.com/package/eslint-p
