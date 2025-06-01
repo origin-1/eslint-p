@@ -1,3 +1,9 @@
+<a name="v0.24.0"></a>
+## [v0.24.0](https://github.com/origin-1/eslint-p/releases/tag/v0.24.0) (2025-06-01)
+
+This release updates the used ESLint version to [v9.28.0](https://eslint.org/blog/2025/05/eslint-v9.28.0-released/).
+The [README file](https://github.com/origin-1/eslint-p/blob/main/README.md) has been updated to reflect the prototyping status of multithread linting in ESLint.
+
 <a name="v0.23.1"></a>
 ## [v0.23.1](https://github.com/origin-1/eslint-p/releases/tag/v0.23.1) (2025-05-22)
 
