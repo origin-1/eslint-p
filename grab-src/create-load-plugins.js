@@ -2,7 +2,8 @@
 
 export default async function createLoadPlugins(importAsESLint)
 {
-    const { Legacy: { naming } } = await importAsESLint('@eslint/eslintrc');
+    const { getShorthandName, normalizePackageName } =
+    await importAsESLint('./lib/shared/naming.js');
 
     /* global loadPlugins -- make-grab lib/cli.js */
 

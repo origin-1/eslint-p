@@ -126,8 +126,8 @@ function useFixtures()
         describe(title, () => fn([]));
         describe
         (
-            `${title} with flag unstable_config_lookup_from_file`,
-            () => fn(['unstable_config_lookup_from_file']),
+            `${title} with flag v10_config_lookup_from_file`,
+            () => fn(['v10_config_lookup_from_file']),
         );
     }
 )
@@ -1193,6 +1193,124 @@ function useFixtures()
                         assert.equal(results[1].suppressedMessages.length, 0);
                         assert.equal(results[2].messages.length, 0);
                         assert.equal(results[2].suppressedMessages.length, 0);
+                    },
+                );
+            },
+        );
+
+        describe
+        (
+            'Globbing based on configs with negated patterns and arrays in `files`',
+            () =>
+            {
+                // https://github.com/eslint/eslint/issues/19813
+                it
+                (
+                    'should not include custom extensions when negated pattern is specified in ' +
+                    '`files`',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd: getFixturePath('file-extensions'),
+                                overrideConfig:
+                                [
+                                    { files: ['!foo.js'] },
+                                    { files: ['!foo.jsx'] },
+                                    { files: ['!foo.ts'] },
+                                    { files: ['!g.tsx'] },
+                                ],
+                            },
+                        );
+                        const results = await eslint.lintFiles(['.']);
+
+                        // should not include d.jsx, f.ts, and other extensions that are not linted
+                        // by default
+                        assert.equal(results.length, 4);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => basename(filePath)),
+                            ['a.js', 'b.mjs', 'c.cjs', 'eslint.config.js'],
+                        );
+                    },
+                );
+
+                it
+                (
+                    'should not include custom extensions when negated pattern is specified in ' +
+                    'an array in `files`',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd: getFixturePath('file-extensions'),
+                                overrideConfig:
+                                [
+                                    { files: [['*', '!foo.js']] },
+                                    { files: [['!foo.js', '*']] },
+                                    { files: [['*', '!foo.ts']] },
+                                    { files: [['!foo.ts', '*']] },
+                                    { files: [['*', '!g.tsx']] },
+                                    { files: [['!g.tsx', '*']] },
+                                ],
+                            },
+                        );
+                        const results = await eslint.lintFiles(['.']);
+
+                        // should not include d.jsx, f.ts, and other extensions that are not linted
+                        // by default
+                        assert.equal(results.length, 4);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => basename(filePath)),
+                            ['a.js', 'b.mjs', 'c.cjs', 'eslint.config.js'],
+                        );
+                    },
+                );
+
+                // https://github.com/eslint/eslint/issues/19814
+                it
+                (
+                    'should include custom extensions when matched by a non-universal pattern ' +
+                    'specified in an array in `files`',
+                    async () =>
+                    {
+                        eslint =
+                        await ESLint.fromCLIOptions
+                        (
+                            {
+                                flag,
+                                cwd: getFixturePath('file-extensions', '..'),
+                                overrideConfig:
+                                [
+                                    { files: [['**/*.jsx', 'file-extensions/*']] },
+                                    { files: [['file-extensions/*', '**/*.ts']] },
+                                ],
+                            },
+                        );
+                        const results = await eslint.lintFiles(['file-extensions']);
+
+                        // should include d.jsx and f.ts, but not other extensions that are not
+                        // linted by default
+                        assert.equal(results.length, 6);
+                        assert.deepEqual
+                        (
+                            results.map(({ filePath }) => basename(filePath)),
+                            [
+                                'a.js',
+                                'b.mjs',
+                                'c.cjs',
+                                'd.jsx',
+                                'eslint.config.js',
+                                'f.ts',
+                            ],
+                        );
                     },
                 );
             },
@@ -2862,7 +2980,7 @@ function useFixtures()
                             [
                                 {
                                     ruleId:     'indent-legacy',
-                                    replacedBy: ['@stylistic/js/indent'],
+                                    replacedBy: ['@stylistic/indent'],
                                     info:       coreRules.get('indent-legacy').meta.deprecated,
                                 },
                             ],
@@ -3013,17 +3131,17 @@ function useFixtures()
                         [
                             {
                                 ruleId:     'semi',
-                                replacedBy: ['@stylistic/js/semi'],
+                                replacedBy: ['@stylistic/semi'],
                                 info:       coreRules.get('semi').meta.deprecated,
                             },
                             {
                                 ruleId:     'quotes',
-                                replacedBy: ['@stylistic/js/quotes'],
+                                replacedBy: ['@stylistic/quotes'],
                                 info:       coreRules.get('quotes').meta.deprecated,
                             },
                             {
                                 ruleId:     'space-infix-ops',
-                                replacedBy: ['@stylistic/js/space-infix-ops'],
+                                replacedBy: ['@stylistic/space-infix-ops'],
                                 info:
                                 coreRules.get('space-infix-ops').meta.deprecated,
                             },
@@ -4774,8 +4892,8 @@ function useFixtures()
         describe(title, () => fn([]));
         describe
         (
-            `${title} with flag unstable_config_lookup_from_file`,
-            () => fn(['unstable_config_lookup_from_file']),
+            `${title} with flag v10_config_lookup_from_file`,
+            () => fn(['v10_config_lookup_from_file']),
         );
     }
 )
@@ -4955,8 +5073,8 @@ function useFixtures()
         describe(title, () => fn([]));
         describe
         (
-            `${title} with flag unstable_config_lookup_from_file`,
-            () => fn(['unstable_config_lookup_from_file']),
+            `${title} with flag v10_config_lookup_from_file`,
+            () => fn(['v10_config_lookup_from_file']),
         );
     }
 )

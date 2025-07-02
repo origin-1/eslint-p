@@ -263,7 +263,7 @@ describe
                 await promisify(execFile)
                 (
                     process.execPath,
-                    [eslintPPath, '--concurrency=2', '--flag=unstable_config_lookup_from_file'],
+                    [eslintPPath, '--concurrency=2', '--flag=v10_config_lookup_from_file'],
                     { cwd: tmpDir, timeout: this.timeout() },
                 );
                 assert.equal(stdout, '');

@@ -8,8 +8,9 @@ const usedDeprecatedRulesCache = new WeakMap();
 
 export default async function createProcessLintReport(importAsESLint, privateMembers)
 {
-    const { Legacy: { ConfigOps: { getRuleSeverity }, naming } } =
-    await importAsESLint('@eslint/eslintrc');
+    const [{ Config }, { getShorthandName }] =
+    await Promise.all
+    ([importAsESLint('./lib/config/config.js'), importAsESLint('./lib/shared/naming.js')]);
 
     /* global getOrFindUsedDeprecatedRules -- make-grab lib/eslint/eslint.js */
 

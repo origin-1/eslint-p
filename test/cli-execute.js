@@ -2828,10 +2828,10 @@ describe
 
         describe
         (
-            'unstable_config_lookup_from_file',
+            'v10_config_lookup_from_file',
             () =>
             {
-                const flag = 'unstable_config_lookup_from_file';
+                const flag = 'v10_config_lookup_from_file';
 
                 it
                 (
