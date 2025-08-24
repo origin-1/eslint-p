@@ -3,7 +3,7 @@ import globals          from 'globals';
 
 export default createConfig
 (
-    { ignores: ['coverage', 'grab', 'test/fixtures'] },
+    { ignores: ['coverage'] },
     {
         jsVersion:          2022,
         languageOptions:    { globals: globals.nodeBuiltin },

@@ -11,7 +11,6 @@
   "license": "ISC",
   "files": [
     "ESLint License.txt",
-    "grab",
     "lib"
   ],
   "bin": {
@@ -23,38 +22,29 @@
   },
   "scripts": {
     "build": "npm install && npm run build-no-install",
-    "build-no-install": "npm run clean && npm run make-grabs && npm run lint && npm run coverage",
+    "build-no-install": "npm run clean && npm run lint && npm run coverage",
     "clean": "node dev/clean.js",
     "coverage": "node dev/coverage.js",
     "lint": "node ./lib/eslint-p.js .",
     "lint:fix": "node ./lib/eslint-p.js --fix .",
-    "make-grabs": "node ./dev/make-grabs.js",
     "release": "npm version -f",
     "test": "mocha test/*.js",
     "version": "git add CHANGELOG.md"
   },
   "dependencies": {
-    "eslint": "9.30.1"
+    "eslint": ">=9.34.0"
   },
   "devDependencies": {
     "@origin-1/eslint-config": "^1.11.0",
-    "acorn": "^8.15.0",
     "c8js": "^0.8.0",
-    "esprima": "^4.0.1",
-    "fs-teardown": "^0.3.2",
     "globals": "^16.3.0",
-    "mocha": "^11.7.1",
-    "sinon": "^21.0.0"
+    "mocha": "^11.7.1"
   },
   "engines": {
     "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
   },
   "exports": {
     "./package.json": "./package.json"
-  },
-  "imports": {
-    "#create-import-as-eslint": "./lib/create-import-as.js",
-    "#create-import-as-eslint-with-linter-patch": "./test/_utils/create-import-as-eslint-with-linter-patch.js"
   },
   "type": "module"
 }

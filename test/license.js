@@ -1,6 +1,6 @@
-import assert           from 'node:assert/strict';
-import { readFile }     from 'node:fs/promises';
-import eslintDirURL     from '../lib/default-eslint-dir-url.js';
+import assert       from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import eslintDirURL from '../lib/default-eslint-dir-url.js';
 
 it
 (

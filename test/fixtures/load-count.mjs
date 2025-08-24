@@ -21,6 +21,6 @@ else
     }
     Atomics.notify(loadConfigCountArray, 0);
 }
-process.emitWarning("\n⚠\n");
+process.emitWarning('\n⚠\n');
 
 export default [{}];
