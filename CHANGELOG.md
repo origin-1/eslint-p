@@ -1,3 +1,9 @@
+<a name="v0.26.0"></a>
+## [v0.26.0](https://github.com/origin-1/eslint-p/releases/tag/v0.26.0) (2025-08-28)
+
+This release upgrades the used ESLint version to [v9.34.0](https://eslint.org/blog/2025/08/eslint-v9.34.0-released/) or later, with built-in multithread linting support.
+As a result, this package is no longer required — it's now recommended to use ESLint directly.
+
 <a name="v0.25.0"></a>
 ## [v0.25.0](https://github.com/origin-1/eslint-p/releases/tag/v0.25.0) (2025-07-02)
 
